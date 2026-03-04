@@ -1,0 +1,44 @@
+name: kanboard
+
+services:
+  kanboard-db:
+    image: postgres:16-alpine
+    container_name: kanboard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kanboard
+      POSTGRES_PASSWORD: kanboard_secret
+      POSTGRES_DB: kanboard_db
+    ports:
+      - '5433:5432'
+    volumes:
+      - kanboard_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kanboard -d kanboard_db']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kanboard-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kanboard-backend
+    restart: unless-stopped
+    ports:
+      - '3001:3001'
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://kanboard:kanboard_secret@kanboard-db:5432/kanboard_db?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
+      JWT_EXPIRATION: 15m
+      JWT_REFRESH_EXPIRATION: 7d
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    depends_on:
+      kanboard-db:
+        condition: service_healthy
+
+volumes:
+  kanboard_postgres_data:

@@ -1,0 +1,245 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── User ────────────────────────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  workspaceMembers WorkspaceMember[]
+  assignedTasks    Task[]           @relation("TaskAssignee")
+  createdTasks     Task[]           @relation("TaskCreator")
+  comments         Comment[]
+  activityLogs     ActivityLog[]
+
+  @@map("users")
+}
+
+// ─── Workspace ───────────────────────────────────────────────────────────────
+
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  slug        String   @unique
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  members  WorkspaceMember[]
+  projects Project[]
+
+  @@map("workspaces")
+}
+
+// ─── Workspace Member (Join Table) ──────────────────────────────────────────
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  role        WorkspaceRole @default(MEMBER)
+  joinedAt    DateTime      @default(now()) @map("joined_at")
+
+  userId      String        @map("user_id")
+  workspaceId String        @map("workspace_id")
+
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([userId])
+  @@index([workspaceId])
+  @@map("workspace_members")
+}
+
+// ─── Project ─────────────────────────────────────────────────────────────────
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  COMPLETED
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  color       String?       @default("#6366f1")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  workspaceId String        @map("workspace_id")
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // Relations
+  boards       Board[]
+  activityLogs ActivityLog[]
+
+  @@index([workspaceId])
+  @@map("projects")
+}
+
+// ─── Board ───────────────────────────────────────────────────────────────────
+
+model Board {
+  id        String   @id @default(uuid())
+  name      String   @default("Main Board")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  projectId String  @map("project_id")
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Relations
+  columns Column[]
+
+  @@index([projectId])
+  @@map("boards")
+}
+
+// ─── Column ──────────────────────────────────────────────────────────────────
+
+model Column {
+  id        String   @id @default(uuid())
+  name      String
+  position  Int      @default(0)
+  color     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  boardId String @map("board_id")
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  // Relations
+  tasks Task[]
+
+  @@index([boardId])
+  @@index([boardId, position])
+  @@map("columns")
+}
+
+// ─── Task ────────────────────────────────────────────────────────────────────
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+model Task {
+  id          String       @id @default(uuid())
+  title       String
+  description String?
+  position    Int          @default(0)
+  priority    TaskPriority @default(MEDIUM)
+  dueDate     DateTime?    @map("due_date")
+  completed   Boolean      @default(false)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  columnId    String  @map("column_id")
+  column      Column  @relation(fields: [columnId], references: [id], onDelete: Cascade)
+
+  assigneeId  String? @map("assignee_id")
+  assignee    User?   @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  creatorId   String  @map("creator_id")
+  creator     User    @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  // Relations
+  comments Comment[]
+  labels   TaskLabel[]
+
+  @@index([columnId])
+  @@index([columnId, position])
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@map("tasks")
+}
+
+// ─── Task Label ──────────────────────────────────────────────────────────────
+
+model TaskLabel {
+  id    String @id @default(uuid())
+  name  String
+  color String @default("#6366f1")
+
+  taskId String @map("task_id")
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("task_labels")
+}
+
+// ─── Comment ─────────────────────────────────────────────────────────────────
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  taskId String @map("task_id")
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  authorId String @map("author_id")
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([authorId])
+  @@map("comments")
+}
+
+// ─── Activity Log ────────────────────────────────────────────────────────────
+
+enum ActivityAction {
+  CREATED
+  UPDATED
+  DELETED
+  MOVED
+  ASSIGNED
+  COMMENTED
+  COMPLETED
+  ARCHIVED
+}
+
+model ActivityLog {
+  id        String         @id @default(uuid())
+  action    ActivityAction
+  entity    String         // e.g. "task", "project", "column"
+  entityId  String         @map("entity_id")
+  metadata  Json?          // Additional context (old/new values, etc.)
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  userId    String  @map("user_id")
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId String? @map("project_id")
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
