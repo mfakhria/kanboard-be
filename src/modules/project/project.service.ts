@@ -20,6 +20,8 @@ export class ProjectService {
         name: dto.name,
         description: dto.description,
         color: dto.color,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+        picId: dto.picId,
         workspaceId: dto.workspaceId,
         boards: {
           create: {
@@ -36,6 +38,14 @@ export class ProjectService {
         },
       },
       include: {
+        pic: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
         boards: {
           include: {
             columns: {
@@ -55,6 +65,14 @@ export class ProjectService {
     return this.prisma.project.findMany({
       where: { workspaceId },
       include: {
+        pic: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
         _count: {
           select: {
             boards: true,
@@ -69,9 +87,23 @@ export class ProjectService {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       include: {
+        pic: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
         workspace: {
           include: {
-            members: true,
+            members: {
+              include: {
+                user: {
+                  select: { id: true, name: true, email: true, avatar: true },
+                },
+              },
+            },
           },
         },
         boards: {
@@ -131,7 +163,20 @@ export class ProjectService {
 
     return this.prisma.project.update({
       where: { id: projectId },
-      data: dto,
+      data: {
+        ...dto,
+        dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+      },
+      include: {
+        pic: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+      },
     });
   }
 

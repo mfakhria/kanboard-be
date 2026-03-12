@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsDateString } from 'class-validator';
 
 export class CreateProjectDto {
   @IsString()
@@ -12,6 +12,14 @@ export class CreateProjectDto {
   @IsString()
   @IsOptional()
   color?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dueDate?: string;
+
+  @IsString()
+  @IsOptional()
+  picId?: string;
 
   @IsString()
   @IsNotEmpty()

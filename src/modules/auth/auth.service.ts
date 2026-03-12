@@ -43,6 +43,21 @@ export class AuthService {
       },
     });
 
+    // Auto-create a default workspace for new users
+    const slug = `ws-${user.id.slice(0, 8)}-${Date.now()}`;
+    await this.prisma.workspace.create({
+      data: {
+        name: 'My Workspace',
+        slug,
+        members: {
+          create: {
+            userId: user.id,
+            role: 'OWNER',
+          },
+        },
+      },
+    });
+
     const tokens = await this.generateTokens(user.id, user.email);
 
     return {

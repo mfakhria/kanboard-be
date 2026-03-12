@@ -22,6 +22,7 @@ model User {
   workspaceMembers WorkspaceMember[]
   assignedTasks    Task[]           @relation("TaskAssignee")
   createdTasks     Task[]           @relation("TaskCreator")
+  picProjects      Project[]        @relation("ProjectPic")
   comments         Comment[]
   activityLogs     ActivityLog[]
 
@@ -85,17 +86,22 @@ model Project {
   description String?
   status      ProjectStatus @default(ACTIVE)
   color       String?       @default("#6366f1")
+  dueDate     DateTime?     @map("due_date")
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
 
   workspaceId String        @map("workspace_id")
   workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  picId       String?       @map("pic_id")
+  pic         User?         @relation("ProjectPic", fields: [picId], references: [id], onDelete: SetNull)
+
   // Relations
   boards       Board[]
   activityLogs ActivityLog[]
 
   @@index([workspaceId])
+  @@index([picId])
   @@map("projects")
 }
 
