@@ -63,7 +63,7 @@ export class ProjectService {
   async findAllByWorkspace(workspaceId: string, userId: string) {
     await this.ensureWorkspaceMember(workspaceId, userId);
 
-    return this.prisma.project.findMany({
+    const projects = await this.prisma.project.findMany({
       where: { workspaceId },
       include: {
         pic: {
@@ -74,13 +74,31 @@ export class ProjectService {
             avatar: true,
           },
         },
-        _count: {
-          select: {
-            boards: true,
+        boards: {
+          include: {
+            columns: {
+              include: {
+                _count: { select: { tasks: true } },
+              },
+            },
           },
         },
       },
       orderBy: { createdAt: 'desc' },
+    });
+
+    return projects.map((p) => {
+      const allColumns = p.boards.flatMap((b) => b.columns);
+      const totalTasks = allColumns.reduce((sum, c) => sum + c._count.tasks, 0);
+      const completedTasks = allColumns
+        .filter((c) => {
+          const name = c.name.toLowerCase();
+          return name.includes('done') || name.includes('complete');
+        })
+        .reduce((sum, c) => sum + c._count.tasks, 0);
+
+      const { boards, ...rest } = p;
+      return { ...rest, totalTasks, completedTasks };
     });
   }
 
