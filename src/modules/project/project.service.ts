@@ -2,9 +2,11 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateProjectDto, UpdateProjectDto } from './dto';
+import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, UpdateMemberRoleDto } from './dto';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class ProjectService {
@@ -14,7 +16,7 @@ export class ProjectService {
     // Verify user is a member of the workspace
     await this.ensureWorkspaceMember(dto.workspaceId, userId);
 
-    // Create project with a default board and default columns
+    // Create project with a default board, default columns, and creator as OWNER
     const project = await this.prisma.project.create({
       data: {
         name: dto.name,
@@ -24,6 +26,12 @@ export class ProjectService {
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         picId: dto.picId,
         workspaceId: dto.workspaceId,
+        members: {
+          create: {
+            userId,
+            role: 'OWNER',
+          },
+        },
         boards: {
           create: {
             name: 'Main Board',
@@ -61,10 +69,21 @@ export class ProjectService {
   }
 
   async findAllByWorkspace(workspaceId: string, userId: string) {
-    await this.ensureWorkspaceMember(workspaceId, userId);
+    const wsMember = await this.ensureWorkspaceMember(workspaceId, userId);
+
+    // Workspace OWNER/ADMIN can see all projects, others only their own
+    const isWsAdmin = ['OWNER', 'ADMIN'].includes(wsMember.role);
 
     const projects = await this.prisma.project.findMany({
-      where: { workspaceId },
+      where: {
+        workspaceId,
+        ...(!isWsAdmin && {
+          OR: [
+            { members: { some: { userId } } },
+            { visibility: 'PUBLIC' },
+          ],
+        }),
+      },
       include: {
         pic: {
           select: {
@@ -73,6 +92,10 @@ export class ProjectService {
             email: true,
             avatar: true,
           },
+        },
+        members: {
+          where: { userId },
+          select: { role: true },
         },
         boards: {
           include: {
@@ -97,8 +120,9 @@ export class ProjectService {
         })
         .reduce((sum, c) => sum + c._count.tasks, 0);
 
-      const { boards, ...rest } = p;
-      return { ...rest, totalTasks, completedTasks };
+      const { boards, members, ...rest } = p;
+      const myRole = members[0]?.role ?? (isWsAdmin ? 'ADMIN' : null);
+      return { ...rest, totalTasks, completedTasks, myRole };
     });
   }
 
@@ -122,6 +146,13 @@ export class ProjectService {
                   select: { id: true, name: true, email: true, avatar: true },
                 },
               },
+            },
+          },
+        },
+        members: {
+          include: {
+            user: {
+              select: { id: true, name: true, email: true, avatar: true },
             },
           },
         },
@@ -157,8 +188,13 @@ export class ProjectService {
       throw new NotFoundException('Project not found');
     }
 
-    const isMember = project.workspace.members.some((m) => m.userId === userId);
-    if (!isMember) {
+    // Allow if user is a project member, workspace OWNER/ADMIN, or project is PUBLIC
+    const isProjectMember = project.members.some((m) => m.userId === userId);
+    const wsMember = project.workspace.members.find((m) => m.userId === userId);
+    const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
+    const isPublic = project.visibility === 'PUBLIC';
+
+    if (!isProjectMember && !isWsAdmin && !(isPublic && wsMember)) {
       throw new ForbiddenException('You do not have access to this project');
     }
 
@@ -168,16 +204,24 @@ export class ProjectService {
   async update(projectId: string, dto: UpdateProjectDto, userId: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      include: { workspace: { include: { members: true } } },
+      include: {
+        workspace: { include: { members: true } },
+        members: true,
+      },
     });
 
     if (!project) {
       throw new NotFoundException('Project not found');
     }
 
-    const isMember = project.workspace.members.some((m) => m.userId === userId);
-    if (!isMember) {
-      throw new ForbiddenException('You do not have access to this project');
+    // Allow project OWNER/ADMIN or workspace OWNER/ADMIN
+    const projectMember = project.members.find((m) => m.userId === userId);
+    const wsMember = project.workspace.members.find((m) => m.userId === userId);
+    const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
+    const isProjectAdmin = projectMember && ['OWNER', 'ADMIN'].includes(projectMember.role);
+
+    if (!isProjectAdmin && !isWsAdmin) {
+      throw new ForbiddenException('You do not have permission to update this project');
     }
 
     return this.prisma.project.update({
@@ -202,16 +246,24 @@ export class ProjectService {
   async delete(projectId: string, userId: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      include: { workspace: { include: { members: true } } },
+      include: {
+        workspace: { include: { members: true } },
+        members: true,
+      },
     });
 
     if (!project) {
       throw new NotFoundException('Project not found');
     }
 
-    const member = project.workspace.members.find((m) => m.userId === userId);
-    if (!member || !['OWNER', 'ADMIN'].includes(member.role)) {
-      throw new ForbiddenException('Only workspace owners/admins can delete projects');
+    // Allow project OWNER or workspace OWNER/ADMIN
+    const projectMember = project.members.find((m) => m.userId === userId);
+    const wsMember = project.workspace.members.find((m) => m.userId === userId);
+    const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
+    const isProjectOwner = projectMember && projectMember.role === 'OWNER';
+
+    if (!isProjectOwner && !isWsAdmin) {
+      throw new ForbiddenException('Only project owners or workspace admins can delete projects');
     }
 
     return this.prisma.project.delete({
@@ -233,5 +285,272 @@ export class ProjectService {
     }
 
     return member;
+  }
+
+  private async ensureProjectAdmin(projectId: string, userId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        workspace: { include: { members: true } },
+        members: true,
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    const projectMember = project.members.find((m) => m.userId === userId);
+    const wsMember = project.workspace.members.find((m) => m.userId === userId);
+    const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
+    const isProjectAdmin = projectMember && ['OWNER', 'ADMIN'].includes(projectMember.role);
+
+    if (!isProjectAdmin && !isWsAdmin) {
+      throw new ForbiddenException('You do not have permission to manage this project');
+    }
+
+    return project;
+  }
+
+  // ─── Invite & Members ──────────────────────────────────────────────────────
+
+  async inviteMember(projectId: string, dto: InviteToProjectDto, inviterId: string) {
+    await this.ensureProjectAdmin(projectId, inviterId);
+
+    // Check if user is already a member
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (existingUser) {
+      const existingMember = await this.prisma.projectMember.findUnique({
+        where: { userId_projectId: { userId: existingUser.id, projectId } },
+      });
+      if (existingMember) {
+        throw new BadRequestException('User is already a member of this project');
+      }
+    }
+
+    // Check for pending invitation
+    const existingInvite = await this.prisma.projectInvitation.findFirst({
+      where: { email: dto.email, projectId, status: 'PENDING' },
+    });
+    if (existingInvite) {
+      throw new BadRequestException('An invitation is already pending for this email');
+    }
+
+    const token = randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    return this.prisma.projectInvitation.create({
+      data: {
+        email: dto.email,
+        token,
+        role: dto.role ?? 'MEMBER',
+        expiresAt,
+        projectId,
+        inviterId,
+      },
+      include: {
+        project: { select: { id: true, name: true } },
+        inviter: { select: { id: true, name: true, email: true } },
+      },
+    });
+  }
+
+  async acceptInvitation(token: string, userId: string) {
+    const invitation = await this.prisma.projectInvitation.findUnique({
+      where: { token },
+      include: {
+        project: { select: { id: true, name: true, workspaceId: true } },
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    if (invitation.status !== 'PENDING') {
+      throw new BadRequestException('This invitation has already been processed');
+    }
+
+    if (invitation.expiresAt < new Date()) {
+      await this.prisma.projectInvitation.update({
+        where: { id: invitation.id },
+        data: { status: 'EXPIRED' },
+      });
+      throw new BadRequestException('This invitation has expired');
+    }
+
+    // Verify the accepting user's email matches the invitation
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.email !== invitation.email) {
+      throw new ForbiddenException('This invitation was sent to a different email address');
+    }
+
+    // Use transaction to update invitation + create member + ensure workspace membership
+    return this.prisma.$transaction(async (tx) => {
+      await tx.projectInvitation.update({
+        where: { id: invitation.id },
+        data: { status: 'ACCEPTED' },
+      });
+
+      // Ensure user is a workspace member
+      const wsId = invitation.project.workspaceId;
+      const wsMember = await tx.workspaceMember.findUnique({
+        where: { userId_workspaceId: { userId, workspaceId: wsId } },
+      });
+      if (!wsMember) {
+        await tx.workspaceMember.create({
+          data: { userId, workspaceId: wsId, role: 'MEMBER' },
+        });
+      }
+
+      // Add as project member
+      return tx.projectMember.create({
+        data: {
+          userId,
+          projectId: invitation.projectId,
+          role: invitation.role,
+        },
+        include: {
+          project: { select: { id: true, name: true, workspaceId: true } },
+          user: { select: { id: true, name: true, email: true, avatar: true } },
+        },
+      });
+    });
+  }
+
+  async declineInvitation(token: string, userId: string) {
+    const invitation = await this.prisma.projectInvitation.findUnique({
+      where: { token },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    // Verify the user's email matches
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.email !== invitation.email) {
+      throw new ForbiddenException('This invitation was sent to a different email address');
+    }
+
+    return this.prisma.projectInvitation.update({
+      where: { id: invitation.id },
+      data: { status: 'DECLINED' },
+    });
+  }
+
+  async getPendingInvitations(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.prisma.projectInvitation.findMany({
+      where: { email: user.email, status: 'PENDING', expiresAt: { gt: new Date() } },
+      include: {
+        project: { select: { id: true, name: true, icon: true, color: true } },
+        inviter: { select: { id: true, name: true, email: true, avatar: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getProjectMembers(projectId: string, userId: string) {
+    // Verify access (project member or ws admin)
+    await this.findById(projectId, userId);
+
+    return this.prisma.projectMember.findMany({
+      where: { projectId },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+      },
+      orderBy: { joinedAt: 'asc' },
+    });
+  }
+
+  async getProjectInvitations(projectId: string, userId: string) {
+    await this.ensureProjectAdmin(projectId, userId);
+
+    return this.prisma.projectInvitation.findMany({
+      where: { projectId, status: 'PENDING' },
+      include: {
+        inviter: { select: { id: true, name: true, email: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async updateMemberRole(projectId: string, memberId: string, dto: UpdateMemberRoleDto, userId: string) {
+    await this.ensureProjectAdmin(projectId, userId);
+
+    const member = await this.prisma.projectMember.findUnique({
+      where: { id: memberId, projectId },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Cannot change the role of the project OWNER unless you're also an OWNER
+    if (member.role === 'OWNER') {
+      const currentMember = await this.prisma.projectMember.findUnique({
+        where: { userId_projectId: { userId, projectId } },
+      });
+      if (!currentMember || currentMember.role !== 'OWNER') {
+        throw new ForbiddenException('Only project owners can change another owner\'s role');
+      }
+    }
+
+    return this.prisma.projectMember.update({
+      where: { id: memberId },
+      data: { role: dto.role },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+      },
+    });
+  }
+
+  async removeMember(projectId: string, memberId: string, userId: string) {
+    await this.ensureProjectAdmin(projectId, userId);
+
+    const member = await this.prisma.projectMember.findUnique({
+      where: { id: memberId, projectId },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found');
+    }
+
+    // Cannot remove the project OWNER
+    if (member.role === 'OWNER') {
+      throw new ForbiddenException('Cannot remove the project owner');
+    }
+
+    return this.prisma.projectMember.delete({
+      where: { id: memberId },
+    });
+  }
+
+  async cancelInvitation(invitationId: string, userId: string) {
+    const invitation = await this.prisma.projectInvitation.findUnique({
+      where: { id: invitationId },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    await this.ensureProjectAdmin(invitation.projectId, userId);
+
+    return this.prisma.projectInvitation.delete({
+      where: { id: invitationId },
+    });
   }
 }

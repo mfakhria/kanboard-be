@@ -7,11 +7,26 @@ export class TaskService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAllByWorkspace(workspaceId: string, userId: string) {
+    // First determine if user is workspace OWNER/ADMIN
+    const wsMember = await this.prisma.workspaceMember.findUnique({
+      where: { userId_workspaceId: { userId, workspaceId } },
+    });
+
+    const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
+
     return this.prisma.task.findMany({
       where: {
         column: {
           board: {
-            project: { workspaceId },
+            project: {
+              workspaceId,
+              ...(!isWsAdmin && {
+                OR: [
+                  { members: { some: { userId } } },
+                  { visibility: 'PUBLIC' },
+                ],
+              }),
+            },
           },
         },
       },

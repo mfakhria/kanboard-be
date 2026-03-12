@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString, IsDateString } from 'class-validator';
-import { ProjectStatus } from '@prisma/client';
+import { ProjectStatus, ProjectVisibility } from '@prisma/client';
 
 export class UpdateProjectDto {
   @IsString()
@@ -29,4 +29,8 @@ export class UpdateProjectDto {
   @IsEnum(ProjectStatus)
   @IsOptional()
   status?: ProjectStatus;
+
+  @IsEnum(ProjectVisibility)
+  @IsOptional()
+  visibility?: ProjectVisibility;
 }

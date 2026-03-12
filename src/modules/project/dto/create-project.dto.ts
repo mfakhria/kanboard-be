@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsOptional, IsString, IsDateString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, IsDateString } from 'class-validator';
+import { ProjectVisibility } from '@prisma/client';
 
 export class CreateProjectDto {
   @IsString()
@@ -24,6 +25,10 @@ export class CreateProjectDto {
   @IsString()
   @IsOptional()
   picId?: string;
+
+  @IsEnum(ProjectVisibility)
+  @IsOptional()
+  visibility?: ProjectVisibility;
 
   @IsString()
   @IsNotEmpty()

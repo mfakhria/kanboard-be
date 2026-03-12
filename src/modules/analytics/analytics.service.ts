@@ -5,17 +5,35 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getWorkspaceStats(workspaceId: string) {
+  async getWorkspaceStats(workspaceId: string, userId?: string) {
+    // If userId provided, determine membership level for filtering
+    let projectFilter: any = { workspaceId };
+    if (userId) {
+      const wsMember = await this.prisma.workspaceMember.findUnique({
+        where: { userId_workspaceId: { userId, workspaceId } },
+      });
+      const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
+      if (!isWsAdmin) {
+        projectFilter = {
+          workspaceId,
+          OR: [
+            { members: { some: { userId } } },
+            { visibility: 'PUBLIC' },
+          ],
+        };
+      }
+    }
+
     const [
       totalProjects,
       activeProjects,
       completedProjects,
       archivedProjects,
     ] = await Promise.all([
-      this.prisma.project.count({ where: { workspaceId } }),
-      this.prisma.project.count({ where: { workspaceId, status: 'ACTIVE' } }),
-      this.prisma.project.count({ where: { workspaceId, status: 'COMPLETED' } }),
-      this.prisma.project.count({ where: { workspaceId, status: 'ARCHIVED' } }),
+      this.prisma.project.count({ where: projectFilter }),
+      this.prisma.project.count({ where: { ...projectFilter, status: 'ACTIVE' } }),
+      this.prisma.project.count({ where: { ...projectFilter, status: 'COMPLETED' } }),
+      this.prisma.project.count({ where: { ...projectFilter, status: 'ARCHIVED' } }),
     ]);
 
     return {
@@ -210,11 +228,29 @@ export class AnalyticsService {
     };
   }
 
-  async getOverviewStats(workspaceId: string) {
+  async getOverviewStats(workspaceId: string, userId?: string) {
+    // Determine project filter based on membership
+    let projectFilter: any = { workspaceId };
+    if (userId) {
+      const wsMember = await this.prisma.workspaceMember.findUnique({
+        where: { userId_workspaceId: { userId, workspaceId } },
+      });
+      const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
+      if (!isWsAdmin) {
+        projectFilter = {
+          workspaceId,
+          OR: [
+            { members: { some: { userId } } },
+            { visibility: 'PUBLIC' },
+          ],
+        };
+      }
+    }
+
     // Task distribution by status (column name)
     const allTasks = await this.prisma.task.findMany({
       where: {
-        column: { board: { project: { workspaceId } } },
+        column: { board: { project: projectFilter } },
       },
       include: {
         column: { select: { name: true } },
@@ -242,7 +278,7 @@ export class AnalyticsService {
     const tasksByPriority = await this.prisma.task.groupBy({
       by: ['priority'],
       where: {
-        column: { board: { project: { workspaceId } } },
+        column: { board: { project: projectFilter } },
       },
       _count: true,
     });
@@ -263,13 +299,13 @@ export class AnalyticsService {
           where: {
             completed: true,
             updatedAt: { gte: weekStart, lte: weekEnd },
-            column: { board: { project: { workspaceId } } },
+            column: { board: { project: projectFilter } },
           },
         }),
         this.prisma.task.count({
           where: {
             createdAt: { gte: weekStart, lte: weekEnd },
-            column: { board: { project: { workspaceId } } },
+            column: { board: { project: projectFilter } },
           },
         }),
       ]);
@@ -294,7 +330,7 @@ export class AnalyticsService {
         where: {
           completed: false,
           dueDate: { gte: weekStart, lte: weekEnd },
-          column: { board: { project: { workspaceId } } },
+          column: { board: { project: projectFilter } },
         },
       });
     }
