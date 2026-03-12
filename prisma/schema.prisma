@@ -86,6 +86,7 @@ model Project {
   description String?
   status      ProjectStatus @default(ACTIVE)
   color       String?       @default("#6366f1")
+  icon        String?       @default("FolderKanban")
   dueDate     DateTime?     @map("due_date")
   createdAt   DateTime      @default(now()) @map("created_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")

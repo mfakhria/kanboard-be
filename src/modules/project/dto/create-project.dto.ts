@@ -13,6 +13,10 @@ export class CreateProjectDto {
   @IsOptional()
   color?: string;
 
+  @IsString()
+  @IsOptional()
+  icon?: string;
+
   @IsDateString()
   @IsOptional()
   dueDate?: string;

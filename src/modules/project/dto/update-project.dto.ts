@@ -14,6 +14,10 @@ export class UpdateProjectDto {
   @IsOptional()
   color?: string;
 
+  @IsString()
+  @IsOptional()
+  icon?: string;
+
   @IsDateString()
   @IsOptional()
   dueDate?: string;

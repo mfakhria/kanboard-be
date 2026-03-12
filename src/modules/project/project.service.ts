@@ -20,6 +20,7 @@ export class ProjectService {
         name: dto.name,
         description: dto.description,
         color: dto.color,
+        icon: dto.icon,
         dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
         picId: dto.picId,
         workspaceId: dto.workspaceId,
