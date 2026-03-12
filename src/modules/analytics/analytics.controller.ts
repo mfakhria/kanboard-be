@@ -21,4 +21,9 @@ export class AnalyticsController {
   async getWeeklySummary(@Query('workspaceId') workspaceId: string) {
     return this.analyticsService.getWeeklySummary(workspaceId);
   }
+
+  @Get('overview/:workspaceId')
+  async getOverviewStats(@Param('workspaceId') workspaceId: string) {
+    return this.analyticsService.getOverviewStats(workspaceId);
+  }
 }

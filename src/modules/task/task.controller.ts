@@ -6,6 +6,7 @@ import {
   Delete,
   Param,
   Body,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { TaskService } from './task.service';
@@ -17,6 +18,14 @@ import { CurrentUser } from '../../common/decorators';
 @UseGuards(JwtAuthGuard)
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
+
+  @Get()
+  async findAll(
+    @Query('workspaceId') workspaceId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.findAllByWorkspace(workspaceId, userId);
+  }
 
   @Post()
   async create(

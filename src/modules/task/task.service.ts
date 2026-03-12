@@ -6,6 +6,38 @@ import { CreateTaskDto, UpdateTaskDto, MoveTaskDto } from './dto';
 export class TaskService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findAllByWorkspace(workspaceId: string, userId: string) {
+    return this.prisma.task.findMany({
+      where: {
+        column: {
+          board: {
+            project: { workspaceId },
+          },
+        },
+      },
+      include: {
+        assignee: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+        creator: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+        labels: true,
+        column: {
+          select: {
+            id: true,
+            name: true,
+            board: {
+              select: { id: true, name: true, projectId: true },
+            },
+          },
+        },
+        _count: { select: { comments: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   async create(dto: CreateTaskDto, creatorId: string) {
     // Get the max position for existing tasks in this column
     const maxPosition = await this.prisma.task.aggregate({

@@ -209,4 +209,109 @@ export class AnalyticsService {
       dailyStats,
     };
   }
+
+  async getOverviewStats(workspaceId: string) {
+    // Task distribution by status (column name)
+    const allTasks = await this.prisma.task.findMany({
+      where: {
+        column: { board: { project: { workspaceId } } },
+      },
+      include: {
+        column: { select: { name: true } },
+      },
+    });
+
+    const totalTasks = allTasks.length;
+    const completedTasks = allTasks.filter(t => t.completed).length;
+    const overdueTasks = allTasks.filter(t => !t.completed && t.dueDate && t.dueDate < new Date()).length;
+    const inProgressTasks = totalTasks - completedTasks - overdueTasks;
+
+    // Task distribution for doughnut chart
+    const columnCounts: Record<string, number> = {};
+    for (const task of allTasks) {
+      const colName = task.column.name;
+      columnCounts[colName] = (columnCounts[colName] || 0) + 1;
+    }
+    const taskDistribution = Object.entries(columnCounts).map(([name, count]) => ({
+      label: name,
+      count,
+      percentage: totalTasks > 0 ? Math.round((count / totalTasks) * 100) : 0,
+    }));
+
+    // Tasks by priority for team performance chart
+    const tasksByPriority = await this.prisma.task.groupBy({
+      by: ['priority'],
+      where: {
+        column: { board: { project: { workspaceId } } },
+      },
+      _count: true,
+    });
+
+    // Weekly task completion trend (last 6 weeks)
+    const now = new Date();
+    const weeklyTrend = [];
+    for (let i = 5; i >= 0; i--) {
+      const weekEnd = new Date(now);
+      weekEnd.setDate(weekEnd.getDate() - (i * 7));
+      weekEnd.setHours(23, 59, 59, 999);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+      weekStart.setHours(0, 0, 0, 0);
+
+      const [completed, created] = await Promise.all([
+        this.prisma.task.count({
+          where: {
+            completed: true,
+            updatedAt: { gte: weekStart, lte: weekEnd },
+            column: { board: { project: { workspaceId } } },
+          },
+        }),
+        this.prisma.task.count({
+          where: {
+            createdAt: { gte: weekStart, lte: weekEnd },
+            column: { board: { project: { workspaceId } } },
+          },
+        }),
+      ]);
+
+      weeklyTrend.push({
+        weekLabel: `Wk ${6 - i}`,
+        completed,
+        created,
+        overdue: 0,
+      });
+    }
+
+    // Count overdue per week
+    for (const week of weeklyTrend) {
+      const idx = weeklyTrend.indexOf(week);
+      const weekEnd = new Date(now);
+      weekEnd.setDate(weekEnd.getDate() - ((5 - idx) * 7));
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+
+      week.overdue = await this.prisma.task.count({
+        where: {
+          completed: false,
+          dueDate: { gte: weekStart, lte: weekEnd },
+          column: { board: { project: { workspaceId } } },
+        },
+      });
+    }
+
+    return {
+      taskStats: {
+        total: totalTasks,
+        completed: completedTasks,
+        inProgress: inProgressTasks,
+        overdue: overdueTasks,
+      },
+      taskDistribution,
+      tasksByPriority: tasksByPriority.map(t => ({
+        priority: t.priority,
+        count: t._count,
+      })),
+      weeklyTrend,
+    };
+  }
 }
