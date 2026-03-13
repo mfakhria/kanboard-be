@@ -13,9 +13,10 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
-  // CORS
+  // CORS — supports comma-separated origins (e.g. "http://localhost:3000,https://kanboard.vercel.app")
+  const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:3000');
   app.enableCors({
-    origin: configService.get<string>('CORS_ORIGIN', 'http://localhost:3000'),
+    origin: corsOrigin.split(',').map(o => o.trim()),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
