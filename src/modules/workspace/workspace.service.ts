@@ -205,6 +205,31 @@ export class WorkspaceService {
     });
   }
 
+  async removeMember(workspaceId: string, memberId: string, removerId: string) {
+    await this.ensureRole(workspaceId, removerId, [
+      WorkspaceRole.OWNER,
+      WorkspaceRole.ADMIN,
+    ]);
+
+    const member = await this.prisma.workspaceMember.findFirst({
+      where: { id: memberId, workspaceId },
+    });
+
+    if (!member) {
+      throw new NotFoundException('Member not found in this workspace');
+    }
+
+    if (member.role === WorkspaceRole.OWNER) {
+      throw new ForbiddenException('Cannot remove the workspace owner');
+    }
+
+    await this.prisma.workspaceMember.delete({
+      where: { id: memberId },
+    });
+
+    return { message: 'Member removed successfully' };
+  }
+
   async delete(workspaceId: string, userId: string) {
     await this.ensureRole(workspaceId, userId, [WorkspaceRole.OWNER]);
 

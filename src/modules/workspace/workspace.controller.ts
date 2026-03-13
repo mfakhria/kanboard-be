@@ -66,6 +66,15 @@ export class WorkspaceController {
     return this.workspaceService.assignRole(workspaceId, memberId, dto, userId);
   }
 
+  @Delete(':id/members/:memberId')
+  async removeMember(
+    @Param('id') workspaceId: string,
+    @Param('memberId') memberId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.workspaceService.removeMember(workspaceId, memberId, userId);
+  }
+
   @Delete(':id')
   async delete(
     @Param('id') workspaceId: string,
