@@ -2,12 +2,12 @@
   "version": 2,
   "buildCommand": "npm run vercel-build",
   "outputDirectory": ".",
-  "functions": {
-    "dist/lambda.js": {
-      "memory": 1024,
-      "maxDuration": 30
+  "builds": [
+    {
+      "src": "dist/lambda.js",
+      "use": "@vercel/node"
     }
-  },
+  ],
   "routes": [
     {
       "src": "/(.*)",
@@ -22,13 +22,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "dist/lambda.js",
-      "headers": {
-        "Access-Control-Allow-Origin": "https://kanzone-fe.vercel.app",
-        "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "true"
-      }
+      "dest": "dist/lambda.js"
     }
   ]
 }
