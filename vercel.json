@@ -1,11 +1,13 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "dist/lambda.js",
-      "use": "@vercel/node"
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": ".",
+  "functions": {
+    "dist/lambda.js": {
+      "memory": 1024,
+      "maxDuration": 30
     }
-  ],
+  },
   "routes": [
     {
       "src": "/(.*)",
