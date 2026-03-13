@@ -2,27 +2,27 @@
   "version": 2,
   "buildCommand": "npm run vercel-build",
   "outputDirectory": ".",
-  "builds": [
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "dist/**",
+      "maxDuration": 30
+    }
+  },
+  "headers": [
     {
-      "src": "dist/lambda.js",
-      "use": "@vercel/node"
+      "source": "/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "https://kanzone-fe.vercel.app" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "methods": ["OPTIONS"],
-      "headers": {
-        "Access-Control-Allow-Origin": "https://kanzone-fe.vercel.app",
-        "Access-Control-Allow-Methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "true"
-      },
-      "status": 204
-    },
-    {
-      "src": "/(.*)",
-      "dest": "dist/lambda.js"
+      "source": "/(.*)",
+      "destination": "/api"
     }
   ]
 }
