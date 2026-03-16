@@ -90,9 +90,6 @@ export class WorkspaceService {
             },
           },
         },
-        projects: {
-          orderBy: { createdAt: 'desc' },
-        },
       },
     });
 
@@ -100,12 +97,27 @@ export class WorkspaceService {
       throw new NotFoundException('Workspace not found');
     }
 
-    const isMember = workspace.members.some((m) => m.userId === userId);
-    if (!isMember) {
+    const member = workspace.members.find((m) => m.userId === userId);
+    if (!member) {
       throw new ForbiddenException('You are not a member of this workspace');
     }
 
-    return workspace;
+    const isWsAdmin = ['OWNER', 'ADMIN'].includes(member.role);
+
+    const projects = await this.prisma.project.findMany({
+      where: {
+        workspaceId,
+        ...(!isWsAdmin && {
+          OR: [
+            { members: { some: { userId } } },
+            { visibility: 'PUBLIC' },
+          ],
+        }),
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return { ...workspace, projects };
   }
 
   async inviteMember(workspaceId: string, dto: InviteMemberDto, inviterId: string) {
