@@ -83,10 +83,10 @@ export declare class ProjectController {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     })[]>;
     acceptInvitation(dto: AcceptInvitationDto, userId: string): Promise<{
         user: {
@@ -113,10 +113,10 @@ export declare class ProjectController {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     }>;
     findOne(projectId: string, userId: string): Promise<{
         workspace: {
@@ -269,10 +269,10 @@ export declare class ProjectController {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     }>;
     getMembers(projectId: string, userId: string): Promise<({
         user: {
@@ -300,10 +300,10 @@ export declare class ProjectController {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     })[]>;
     updateMemberRole(projectId: string, memberId: string, dto: UpdateMemberRoleDto, userId: string): Promise<{
         user: {
@@ -332,9 +332,9 @@ export declare class ProjectController {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     }>;
 }

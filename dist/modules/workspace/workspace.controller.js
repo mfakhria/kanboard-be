@@ -28,8 +28,20 @@ let WorkspaceController = class WorkspaceController {
     async findAll(userId) {
         return this.workspaceService.findAllByUser(userId);
     }
+    async getPendingInvitations(userId) {
+        return this.workspaceService.getPendingInvitations(userId);
+    }
+    async acceptInvitation(invitationId, userId) {
+        return this.workspaceService.acceptInvitation(invitationId, userId);
+    }
+    async declineInvitation(invitationId, userId) {
+        return this.workspaceService.declineInvitation(invitationId, userId);
+    }
     async findOne(workspaceId, userId) {
         return this.workspaceService.findById(workspaceId, userId);
+    }
+    async update(workspaceId, dto, userId) {
+        return this.workspaceService.update(workspaceId, dto, userId);
     }
     async inviteMember(workspaceId, dto, userId) {
         return this.workspaceService.inviteMember(workspaceId, dto, userId);
@@ -64,6 +76,29 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], WorkspaceController.prototype, "findAll", null);
 __decorate([
+    (0, common_1.Get)('invitations/pending'),
+    __param(0, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], WorkspaceController.prototype, "getPendingInvitations", null);
+__decorate([
+    (0, common_1.Post)('invitations/:invitationId/accept'),
+    __param(0, (0, common_1.Param)('invitationId')),
+    __param(1, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], WorkspaceController.prototype, "acceptInvitation", null);
+__decorate([
+    (0, common_1.Post)('invitations/:invitationId/decline'),
+    __param(0, (0, common_1.Param)('invitationId')),
+    __param(1, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], WorkspaceController.prototype, "declineInvitation", null);
+__decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, decorators_1.CurrentUser)('id')),
@@ -71,6 +106,15 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], WorkspaceController.prototype, "findOne", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, dto_1.UpdateWorkspaceDto, String]),
+    __metadata("design:returntype", Promise)
+], WorkspaceController.prototype, "update", null);
 __decorate([
     (0, common_1.Post)(':id/members'),
     __param(0, (0, common_1.Param)('id')),

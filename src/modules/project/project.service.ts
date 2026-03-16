@@ -65,24 +65,40 @@ export class ProjectService {
       },
     });
 
+    // Auto-add all other team members to the new project
+    const workspaceMembers = await this.prisma.workspaceMember.findMany({
+      where: { workspaceId: dto.workspaceId },
+      select: { userId: true },
+    });
+
+    const otherMembers = workspaceMembers
+      .filter((m) => m.userId !== userId)
+      .map((m) => ({
+        userId: m.userId,
+        projectId: project.id,
+        role: 'MEMBER' as const,
+      }));
+
+    if (otherMembers.length > 0) {
+      await this.prisma.projectMember.createMany({
+        data: otherMembers,
+        skipDuplicates: true,
+      });
+    }
+
     return project;
   }
 
   async findAllByWorkspace(workspaceId: string, userId: string) {
     const wsMember = await this.ensureWorkspaceMember(workspaceId, userId);
 
-    // Workspace OWNER/ADMIN can see all projects, others only their own
-    const isWsAdmin = ['OWNER', 'ADMIN'].includes(wsMember.role);
-
     const projects = await this.prisma.project.findMany({
       where: {
         workspaceId,
-        ...(!isWsAdmin && {
-          OR: [
-            { members: { some: { userId } } },
-            { visibility: 'PUBLIC' },
-          ],
-        }),
+        OR: [
+          { members: { some: { userId } } },
+          { visibility: 'PUBLIC' },
+        ],
       },
       include: {
         pic: {
@@ -121,6 +137,7 @@ export class ProjectService {
         .reduce((sum, c) => sum + c._count.tasks, 0);
 
       const { boards, members, ...rest } = p;
+      const isWsAdmin = ['OWNER', 'ADMIN'].includes(wsMember.role);
       const myRole = members[0]?.role ?? (isWsAdmin ? 'ADMIN' : null);
       return { ...rest, totalTasks, completedTasks, myRole };
     });
@@ -263,7 +280,7 @@ export class ProjectService {
     const isProjectOwner = projectMember && projectMember.role === 'OWNER';
 
     if (!isProjectOwner && !isWsAdmin) {
-      throw new ForbiddenException('Only project owners or workspace admins can delete projects');
+      throw new ForbiddenException('Only project owners or team admins can delete projects');
     }
 
     return this.prisma.project.delete({
@@ -281,7 +298,7 @@ export class ProjectService {
     });
 
     if (!member) {
-      throw new ForbiddenException('You are not a member of this workspace');
+      throw new ForbiddenException('You are not a member of this team');
     }
 
     return member;

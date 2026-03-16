@@ -6,22 +6,15 @@ export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getWorkspaceStats(workspaceId: string, userId?: string) {
-    // If userId provided, determine membership level for filtering
     let projectFilter: any = { workspaceId };
     if (userId) {
-      const wsMember = await this.prisma.workspaceMember.findUnique({
-        where: { userId_workspaceId: { userId, workspaceId } },
-      });
-      const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
-      if (!isWsAdmin) {
-        projectFilter = {
-          workspaceId,
-          OR: [
-            { members: { some: { userId } } },
-            { visibility: 'PUBLIC' },
-          ],
-        };
-      }
+      projectFilter = {
+        workspaceId,
+        OR: [
+          { members: { some: { userId } } },
+          { visibility: 'PUBLIC' },
+        ],
+      };
     }
 
     const [
@@ -229,22 +222,15 @@ export class AnalyticsService {
   }
 
   async getOverviewStats(workspaceId: string, userId?: string) {
-    // Determine project filter based on membership
     let projectFilter: any = { workspaceId };
     if (userId) {
-      const wsMember = await this.prisma.workspaceMember.findUnique({
-        where: { userId_workspaceId: { userId, workspaceId } },
-      });
-      const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
-      if (!isWsAdmin) {
-        projectFilter = {
-          workspaceId,
-          OR: [
-            { members: { some: { userId } } },
-            { visibility: 'PUBLIC' },
-          ],
-        };
-      }
+      projectFilter = {
+        workspaceId,
+        OR: [
+          { members: { some: { userId } } },
+          { visibility: 'PUBLIC' },
+        ],
+      };
     }
 
     // Task distribution by status (column name)

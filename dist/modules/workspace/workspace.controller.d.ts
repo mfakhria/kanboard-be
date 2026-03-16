@@ -1,5 +1,5 @@
 import { WorkspaceService } from './workspace.service';
-import { CreateWorkspaceDto, InviteMemberDto, AssignRoleDto } from './dto';
+import { CreateWorkspaceDto, UpdateWorkspaceDto, InviteMemberDto, AssignRoleDto } from './dto';
 export declare class WorkspaceController {
     private readonly workspaceService;
     constructor(workspaceService: WorkspaceService);
@@ -52,21 +52,55 @@ export declare class WorkspaceController {
         description: string | null;
         slug: string;
     })[]>;
-    findOne(workspaceId: string, userId: string): Promise<{
-        members: ({
-            user: {
-                name: string;
-                email: string;
-                id: string;
-                avatar: string | null;
-            };
-        } & {
+    getPendingInvitations(userId: string): Promise<({
+        workspace: {
+            name: string;
             id: string;
-            role: import(".prisma/client").$Enums.WorkspaceRole;
-            joinedAt: Date;
-            userId: string;
-            workspaceId: string;
-        })[];
+            slug: string;
+        };
+        inviter: {
+            name: string;
+            email: string;
+            id: string;
+            avatar: string | null;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        role: import(".prisma/client").$Enums.WorkspaceRole;
+        workspaceId: string;
+        status: import(".prisma/client").$Enums.WorkspaceInvitationStatus;
+        respondedAt: Date | null;
+        inviterId: string;
+        inviteeId: string;
+    })[]>;
+    acceptInvitation(invitationId: string, userId: string): Promise<{
+        user: {
+            name: string;
+            email: string;
+            id: string;
+            avatar: string | null;
+        };
+    } & {
+        id: string;
+        role: import(".prisma/client").$Enums.WorkspaceRole;
+        joinedAt: Date;
+        userId: string;
+        workspaceId: string;
+    }>;
+    declineInvitation(invitationId: string, userId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        role: import(".prisma/client").$Enums.WorkspaceRole;
+        workspaceId: string;
+        status: import(".prisma/client").$Enums.WorkspaceInvitationStatus;
+        respondedAt: Date | null;
+        inviterId: string;
+        inviteeId: string;
+    }>;
+    findOne(workspaceId: string, userId: string): Promise<{
         projects: {
             name: string;
             id: string;
@@ -81,6 +115,42 @@ export declare class WorkspaceController {
             dueDate: Date | null;
             picId: string | null;
         }[];
+        members: ({
+            user: {
+                name: string;
+                email: string;
+                id: string;
+                avatar: string | null;
+            };
+        } & {
+            id: string;
+            role: import(".prisma/client").$Enums.WorkspaceRole;
+            joinedAt: Date;
+            userId: string;
+            workspaceId: string;
+        })[];
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        description: string | null;
+        slug: string;
+    }>;
+    update(workspaceId: string, dto: UpdateWorkspaceDto, userId: string): Promise<{
+        members: ({
+            user: {
+                name: string;
+                email: string;
+                id: string;
+                avatar: string | null;
+            };
+        } & {
+            id: string;
+            role: import(".prisma/client").$Enums.WorkspaceRole;
+            joinedAt: Date;
+            userId: string;
+            workspaceId: string;
+        })[];
     } & {
         name: string;
         id: string;
@@ -90,7 +160,18 @@ export declare class WorkspaceController {
         slug: string;
     }>;
     inviteMember(workspaceId: string, dto: InviteMemberDto, userId: string): Promise<{
-        user: {
+        workspace: {
+            name: string;
+            id: string;
+            slug: string;
+        };
+        inviter: {
+            name: string;
+            email: string;
+            id: string;
+            avatar: string | null;
+        };
+        invitee: {
             name: string;
             email: string;
             id: string;
@@ -98,10 +179,14 @@ export declare class WorkspaceController {
         };
     } & {
         id: string;
+        createdAt: Date;
+        updatedAt: Date;
         role: import(".prisma/client").$Enums.WorkspaceRole;
-        joinedAt: Date;
-        userId: string;
         workspaceId: string;
+        status: import(".prisma/client").$Enums.WorkspaceInvitationStatus;
+        respondedAt: Date | null;
+        inviterId: string;
+        inviteeId: string;
     }>;
     listMembers(workspaceId: string, userId: string): Promise<({
         user: {

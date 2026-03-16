@@ -31,6 +31,7 @@ services:
       NODE_ENV: production
       PORT: 3001
       DATABASE_URL: postgresql://kanboard:kanboard_secret@kanboard-db:5432/kanboard_db?schema=public
+      DIRECT_URL: postgresql://kanboard:kanboard_secret@kanboard-db:5432/kanboard_db?schema=public
       JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
       JWT_EXPIRATION: 15m

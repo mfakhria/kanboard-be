@@ -91,19 +91,61 @@ let WorkspaceService = class WorkspaceService {
                         },
                     },
                 },
-                projects: {
-                    orderBy: { createdAt: 'desc' },
-                },
             },
         });
         if (!workspace) {
-            throw new common_1.NotFoundException('Workspace not found');
+            throw new common_1.NotFoundException('Team not found');
         }
-        const isMember = workspace.members.some((m) => m.userId === userId);
-        if (!isMember) {
-            throw new common_1.ForbiddenException('You are not a member of this workspace');
+        const member = workspace.members.find((m) => m.userId === userId);
+        if (!member) {
+            throw new common_1.ForbiddenException('You are not a member of this team');
         }
-        return workspace;
+        const projects = await this.prisma.project.findMany({
+            where: {
+                workspaceId,
+                OR: [
+                    { members: { some: { userId } } },
+                    { visibility: 'PUBLIC' },
+                ],
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+        return { ...workspace, projects };
+    }
+    async update(workspaceId, dto, userId) {
+        await this.ensureRole(workspaceId, userId, [
+            client_1.WorkspaceRole.OWNER,
+            client_1.WorkspaceRole.ADMIN,
+        ], 'Anda tidak dapat mengedit workspace milik user lain.');
+        const data = {};
+        if (typeof dto.name === 'string') {
+            const trimmed = dto.name.trim();
+            if (trimmed.length > 0) {
+                data.name = trimmed;
+            }
+        }
+        if (typeof dto.description === 'string') {
+            const trimmed = dto.description.trim();
+            data.description = trimmed.length > 0 ? trimmed : null;
+        }
+        return this.prisma.workspace.update({
+            where: { id: workspaceId },
+            data,
+            include: {
+                members: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
     }
     async inviteMember(workspaceId, dto, inviterId) {
         await this.ensureRole(workspaceId, inviterId, [
@@ -116,6 +158,9 @@ let WorkspaceService = class WorkspaceService {
         if (!user) {
             throw new common_1.NotFoundException('User with this email not found');
         }
+        if (user.id === inviterId) {
+            throw new common_1.BadRequestException('You cannot invite yourself');
+        }
         const existingMember = await this.prisma.workspaceMember.findUnique({
             where: {
                 userId_workspaceId: {
@@ -125,16 +170,34 @@ let WorkspaceService = class WorkspaceService {
             },
         });
         if (existingMember) {
-            throw new common_1.ConflictException('User is already a member of this workspace');
+            throw new common_1.ConflictException('User is already a member of this team');
         }
-        return this.prisma.workspaceMember.create({
-            data: {
-                userId: user.id,
+        const existingInvite = await this.prisma.workspaceInvitation.findFirst({
+            where: {
                 workspaceId,
+                inviteeId: user.id,
+                status: client_1.WorkspaceInvitationStatus.PENDING,
+            },
+        });
+        if (existingInvite) {
+            throw new common_1.ConflictException('An invitation is already pending for this user');
+        }
+        return this.prisma.workspaceInvitation.create({
+            data: {
+                workspaceId,
+                inviterId,
+                inviteeId: user.id,
                 role: dto.role || client_1.WorkspaceRole.MEMBER,
             },
             include: {
-                user: {
+                workspace: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    },
+                },
+                inviter: {
                     select: {
                         id: true,
                         name: true,
@@ -142,6 +205,130 @@ let WorkspaceService = class WorkspaceService {
                         avatar: true,
                     },
                 },
+                invitee: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        avatar: true,
+                    },
+                },
+            },
+        });
+    }
+    async getPendingInvitations(userId) {
+        return this.prisma.workspaceInvitation.findMany({
+            where: {
+                inviteeId: userId,
+                status: client_1.WorkspaceInvitationStatus.PENDING,
+            },
+            include: {
+                workspace: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                    },
+                },
+                inviter: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        avatar: true,
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+    async acceptInvitation(invitationId, userId) {
+        const invitation = await this.prisma.workspaceInvitation.findUnique({
+            where: { id: invitationId },
+            include: {
+                workspace: {
+                    select: {
+                        id: true,
+                    },
+                },
+            },
+        });
+        if (!invitation) {
+            throw new common_1.NotFoundException('Invitation not found');
+        }
+        if (invitation.inviteeId !== userId) {
+            throw new common_1.ForbiddenException('This invitation is not for you');
+        }
+        if (invitation.status !== client_1.WorkspaceInvitationStatus.PENDING) {
+            throw new common_1.BadRequestException('This invitation has already been processed');
+        }
+        return this.prisma.$transaction(async (tx) => {
+            await tx.workspaceInvitation.update({
+                where: { id: invitation.id },
+                data: {
+                    status: client_1.WorkspaceInvitationStatus.ACCEPTED,
+                    respondedAt: new Date(),
+                },
+            });
+            const member = await tx.workspaceMember.upsert({
+                where: {
+                    userId_workspaceId: {
+                        userId,
+                        workspaceId: invitation.workspaceId,
+                    },
+                },
+                update: {},
+                create: {
+                    userId,
+                    workspaceId: invitation.workspaceId,
+                    role: invitation.role,
+                },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                            avatar: true,
+                        },
+                    },
+                },
+            });
+            const projects = await tx.project.findMany({
+                where: { workspaceId: invitation.workspaceId },
+                select: { id: true },
+            });
+            if (projects.length > 0) {
+                await tx.projectMember.createMany({
+                    data: projects.map((p) => ({
+                        userId,
+                        projectId: p.id,
+                        role: 'MEMBER',
+                    })),
+                    skipDuplicates: true,
+                });
+            }
+            return member;
+        });
+    }
+    async declineInvitation(invitationId, userId) {
+        const invitation = await this.prisma.workspaceInvitation.findUnique({
+            where: { id: invitationId },
+        });
+        if (!invitation) {
+            throw new common_1.NotFoundException('Invitation not found');
+        }
+        if (invitation.inviteeId !== userId) {
+            throw new common_1.ForbiddenException('This invitation is not for you');
+        }
+        if (invitation.status !== client_1.WorkspaceInvitationStatus.PENDING) {
+            throw new common_1.BadRequestException('This invitation has already been processed');
+        }
+        return this.prisma.workspaceInvitation.update({
+            where: { id: invitation.id },
+            data: {
+                status: client_1.WorkspaceInvitationStatus.DECLINED,
+                respondedAt: new Date(),
             },
         });
     }
@@ -168,7 +355,7 @@ let WorkspaceService = class WorkspaceService {
             where: { id: memberId, workspaceId },
         });
         if (!member) {
-            throw new common_1.NotFoundException('Member not found in this workspace');
+            throw new common_1.NotFoundException('Member not found in this team');
         }
         return this.prisma.workspaceMember.update({
             where: { id: memberId },
@@ -194,11 +381,17 @@ let WorkspaceService = class WorkspaceService {
             where: { id: memberId, workspaceId },
         });
         if (!member) {
-            throw new common_1.NotFoundException('Member not found in this workspace');
+            throw new common_1.NotFoundException('Member not found in this team');
         }
         if (member.role === client_1.WorkspaceRole.OWNER) {
-            throw new common_1.ForbiddenException('Cannot remove the workspace owner');
+            throw new common_1.ForbiddenException('Cannot remove the team owner');
         }
+        await this.prisma.projectMember.deleteMany({
+            where: {
+                userId: member.userId,
+                project: { workspaceId },
+            },
+        });
         await this.prisma.workspaceMember.delete({
             where: { id: memberId },
         });
@@ -217,14 +410,14 @@ let WorkspaceService = class WorkspaceService {
             },
         });
         if (!member) {
-            throw new common_1.ForbiddenException('You are not a member of this workspace');
+            throw new common_1.ForbiddenException('You are not a member of this team');
         }
         return member;
     }
-    async ensureRole(workspaceId, userId, roles) {
+    async ensureRole(workspaceId, userId, roles, forbiddenMessage = 'Insufficient permissions') {
         const member = await this.ensureMember(workspaceId, userId);
         if (!roles.includes(member.role)) {
-            throw new common_1.ForbiddenException('Insufficient permissions');
+            throw new common_1.ForbiddenException(forbiddenMessage);
         }
         return member;
     }

@@ -3,10 +3,16 @@ import {
   NotFoundException,
   ForbiddenException,
   ConflictException,
+  BadRequestException,
 } from '@nestjs/common';
-import { WorkspaceRole } from '@prisma/client';
+import { WorkspaceRole, WorkspaceInvitationStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateWorkspaceDto, InviteMemberDto, AssignRoleDto } from './dto';
+import {
+  CreateWorkspaceDto,
+  UpdateWorkspaceDto,
+  InviteMemberDto,
+  AssignRoleDto,
+} from './dto';
 
 @Injectable()
 export class WorkspaceService {
@@ -94,30 +100,66 @@ export class WorkspaceService {
     });
 
     if (!workspace) {
-      throw new NotFoundException('Workspace not found');
+      throw new NotFoundException('Team not found');
     }
 
     const member = workspace.members.find((m) => m.userId === userId);
     if (!member) {
-      throw new ForbiddenException('You are not a member of this workspace');
+      throw new ForbiddenException('You are not a member of this team');
     }
-
-    const isWsAdmin = ['OWNER', 'ADMIN'].includes(member.role);
 
     const projects = await this.prisma.project.findMany({
       where: {
         workspaceId,
-        ...(!isWsAdmin && {
-          OR: [
-            { members: { some: { userId } } },
-            { visibility: 'PUBLIC' },
-          ],
-        }),
+        OR: [
+          { members: { some: { userId } } },
+          { visibility: 'PUBLIC' },
+        ],
       },
       orderBy: { createdAt: 'desc' },
     });
 
     return { ...workspace, projects };
+  }
+
+  async update(workspaceId: string, dto: UpdateWorkspaceDto, userId: string) {
+    await this.ensureRole(workspaceId, userId, [
+      WorkspaceRole.OWNER,
+      WorkspaceRole.ADMIN,
+    ], 'Anda tidak dapat mengedit workspace milik user lain.');
+
+    const data: { name?: string; description?: string | null } = {};
+
+    if (typeof dto.name === 'string') {
+      const trimmed = dto.name.trim();
+      if (trimmed.length > 0) {
+        data.name = trimmed;
+      }
+    }
+
+    if (typeof dto.description === 'string') {
+      const trimmed = dto.description.trim();
+      data.description = trimmed.length > 0 ? trimmed : null;
+    }
+
+    return this.prisma.workspace.update({
+      where: { id: workspaceId },
+      data,
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   async inviteMember(workspaceId: string, dto: InviteMemberDto, inviterId: string) {
@@ -134,6 +176,10 @@ export class WorkspaceService {
       throw new NotFoundException('User with this email not found');
     }
 
+    if (user.id === inviterId) {
+      throw new BadRequestException('You cannot invite yourself');
+    }
+
     const existingMember = await this.prisma.workspaceMember.findUnique({
       where: {
         userId_workspaceId: {
@@ -144,17 +190,37 @@ export class WorkspaceService {
     });
 
     if (existingMember) {
-      throw new ConflictException('User is already a member of this workspace');
+      throw new ConflictException('User is already a member of this team');
     }
 
-    return this.prisma.workspaceMember.create({
-      data: {
-        userId: user.id,
+    const existingInvite = await this.prisma.workspaceInvitation.findFirst({
+      where: {
         workspaceId,
+        inviteeId: user.id,
+        status: WorkspaceInvitationStatus.PENDING,
+      },
+    });
+
+    if (existingInvite) {
+      throw new ConflictException('An invitation is already pending for this user');
+    }
+
+    return this.prisma.workspaceInvitation.create({
+      data: {
+        workspaceId,
+        inviterId,
+        inviteeId: user.id,
         role: dto.role || WorkspaceRole.MEMBER,
       },
       include: {
-        user: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        inviter: {
           select: {
             id: true,
             name: true,
@@ -162,6 +228,145 @@ export class WorkspaceService {
             avatar: true,
           },
         },
+        invitee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getPendingInvitations(userId: string) {
+    return this.prisma.workspaceInvitation.findMany({
+      where: {
+        inviteeId: userId,
+        status: WorkspaceInvitationStatus.PENDING,
+      },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        inviter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async acceptInvitation(invitationId: string, userId: string) {
+    const invitation = await this.prisma.workspaceInvitation.findUnique({
+      where: { id: invitationId },
+      include: {
+        workspace: {
+          select: {
+            id: true,
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    if (invitation.inviteeId !== userId) {
+      throw new ForbiddenException('This invitation is not for you');
+    }
+
+    if (invitation.status !== WorkspaceInvitationStatus.PENDING) {
+      throw new BadRequestException('This invitation has already been processed');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.workspaceInvitation.update({
+        where: { id: invitation.id },
+        data: {
+          status: WorkspaceInvitationStatus.ACCEPTED,
+          respondedAt: new Date(),
+        },
+      });
+
+      const member = await tx.workspaceMember.upsert({
+        where: {
+          userId_workspaceId: {
+            userId,
+            workspaceId: invitation.workspaceId,
+          },
+        },
+        update: {},
+        create: {
+          userId,
+          workspaceId: invitation.workspaceId,
+          role: invitation.role,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            },
+          },
+        },
+      });
+
+      const projects = await tx.project.findMany({
+        where: { workspaceId: invitation.workspaceId },
+        select: { id: true },
+      });
+
+      if (projects.length > 0) {
+        await tx.projectMember.createMany({
+          data: projects.map((p) => ({
+            userId,
+            projectId: p.id,
+            role: 'MEMBER' as const,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      return member;
+    });
+  }
+
+  async declineInvitation(invitationId: string, userId: string) {
+    const invitation = await this.prisma.workspaceInvitation.findUnique({
+      where: { id: invitationId },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    if (invitation.inviteeId !== userId) {
+      throw new ForbiddenException('This invitation is not for you');
+    }
+
+    if (invitation.status !== WorkspaceInvitationStatus.PENDING) {
+      throw new BadRequestException('This invitation has already been processed');
+    }
+
+    return this.prisma.workspaceInvitation.update({
+      where: { id: invitation.id },
+      data: {
+        status: WorkspaceInvitationStatus.DECLINED,
+        respondedAt: new Date(),
       },
     });
   }
@@ -198,7 +403,7 @@ export class WorkspaceService {
     });
 
     if (!member) {
-      throw new NotFoundException('Member not found in this workspace');
+      throw new NotFoundException('Member not found in this team');
     }
 
     return this.prisma.workspaceMember.update({
@@ -228,12 +433,20 @@ export class WorkspaceService {
     });
 
     if (!member) {
-      throw new NotFoundException('Member not found in this workspace');
+      throw new NotFoundException('Member not found in this team');
     }
 
     if (member.role === WorkspaceRole.OWNER) {
-      throw new ForbiddenException('Cannot remove the workspace owner');
+      throw new ForbiddenException('Cannot remove the team owner');
     }
+
+    // Cascade: remove from all projects in this team
+    await this.prisma.projectMember.deleteMany({
+      where: {
+        userId: member.userId,
+        project: { workspaceId },
+      },
+    });
 
     await this.prisma.workspaceMember.delete({
       where: { id: memberId },
@@ -260,7 +473,7 @@ export class WorkspaceService {
     });
 
     if (!member) {
-      throw new ForbiddenException('You are not a member of this workspace');
+      throw new ForbiddenException('You are not a member of this team');
     }
 
     return member;
@@ -270,11 +483,12 @@ export class WorkspaceService {
     workspaceId: string,
     userId: string,
     roles: WorkspaceRole[],
+    forbiddenMessage = 'Insufficient permissions',
   ) {
     const member = await this.ensureMember(workspaceId, userId);
 
     if (!roles.includes(member.role)) {
-      throw new ForbiddenException('Insufficient permissions');
+      throw new ForbiddenException(forbiddenMessage);
     }
 
     return member;

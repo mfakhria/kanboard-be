@@ -17,22 +17,16 @@ let TaskService = class TaskService {
         this.prisma = prisma;
     }
     async findAllByWorkspace(workspaceId, userId) {
-        const wsMember = await this.prisma.workspaceMember.findUnique({
-            where: { userId_workspaceId: { userId, workspaceId } },
-        });
-        const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
         return this.prisma.task.findMany({
             where: {
                 column: {
                     board: {
                         project: {
                             workspaceId,
-                            ...(!isWsAdmin && {
-                                OR: [
-                                    { members: { some: { userId } } },
-                                    { visibility: 'PUBLIC' },
-                                ],
-                            }),
+                            OR: [
+                                { members: { some: { userId } } },
+                                { visibility: 'PUBLIC' },
+                            ],
                         },
                     },
                 },

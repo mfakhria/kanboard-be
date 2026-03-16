@@ -66,20 +66,34 @@ let ProjectService = class ProjectService {
                 },
             },
         });
+        const workspaceMembers = await this.prisma.workspaceMember.findMany({
+            where: { workspaceId: dto.workspaceId },
+            select: { userId: true },
+        });
+        const otherMembers = workspaceMembers
+            .filter((m) => m.userId !== userId)
+            .map((m) => ({
+            userId: m.userId,
+            projectId: project.id,
+            role: 'MEMBER',
+        }));
+        if (otherMembers.length > 0) {
+            await this.prisma.projectMember.createMany({
+                data: otherMembers,
+                skipDuplicates: true,
+            });
+        }
         return project;
     }
     async findAllByWorkspace(workspaceId, userId) {
         const wsMember = await this.ensureWorkspaceMember(workspaceId, userId);
-        const isWsAdmin = ['OWNER', 'ADMIN'].includes(wsMember.role);
         const projects = await this.prisma.project.findMany({
             where: {
                 workspaceId,
-                ...(!isWsAdmin && {
-                    OR: [
-                        { members: { some: { userId } } },
-                        { visibility: 'PUBLIC' },
-                    ],
-                }),
+                OR: [
+                    { members: { some: { userId } } },
+                    { visibility: 'PUBLIC' },
+                ],
             },
             include: {
                 pic: {
@@ -116,6 +130,7 @@ let ProjectService = class ProjectService {
             })
                 .reduce((sum, c) => sum + c._count.tasks, 0);
             const { boards, members, ...rest } = p;
+            const isWsAdmin = ['OWNER', 'ADMIN'].includes(wsMember.role);
             const myRole = members[0]?.role ?? (isWsAdmin ? 'ADMIN' : null);
             return { ...rest, totalTasks, completedTasks, myRole };
         });
@@ -241,7 +256,7 @@ let ProjectService = class ProjectService {
         const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
         const isProjectOwner = projectMember && projectMember.role === 'OWNER';
         if (!isProjectOwner && !isWsAdmin) {
-            throw new common_1.ForbiddenException('Only project owners or workspace admins can delete projects');
+            throw new common_1.ForbiddenException('Only project owners or team admins can delete projects');
         }
         return this.prisma.project.delete({
             where: { id: projectId },
@@ -254,7 +269,7 @@ let ProjectService = class ProjectService {
             },
         });
         if (!member) {
-            throw new common_1.ForbiddenException('You are not a member of this workspace');
+            throw new common_1.ForbiddenException('You are not a member of this team');
         }
         return member;
     }

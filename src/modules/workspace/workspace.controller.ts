@@ -9,7 +9,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
-import { CreateWorkspaceDto, InviteMemberDto, AssignRoleDto } from './dto';
+import {
+  CreateWorkspaceDto,
+  UpdateWorkspaceDto,
+  InviteMemberDto,
+  AssignRoleDto,
+} from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators';
 
@@ -31,12 +36,42 @@ export class WorkspaceController {
     return this.workspaceService.findAllByUser(userId);
   }
 
+  @Get('invitations/pending')
+  async getPendingInvitations(@CurrentUser('id') userId: string) {
+    return this.workspaceService.getPendingInvitations(userId);
+  }
+
+  @Post('invitations/:invitationId/accept')
+  async acceptInvitation(
+    @Param('invitationId') invitationId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.workspaceService.acceptInvitation(invitationId, userId);
+  }
+
+  @Post('invitations/:invitationId/decline')
+  async declineInvitation(
+    @Param('invitationId') invitationId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.workspaceService.declineInvitation(invitationId, userId);
+  }
+
   @Get(':id')
   async findOne(
     @Param('id') workspaceId: string,
     @CurrentUser('id') userId: string,
   ) {
     return this.workspaceService.findById(workspaceId, userId);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') workspaceId: string,
+    @Body() dto: UpdateWorkspaceDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.workspaceService.update(workspaceId, dto, userId);
   }
 
   @Post(':id/members')

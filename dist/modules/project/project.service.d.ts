@@ -217,10 +217,10 @@ export declare class ProjectService {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     }>;
     acceptInvitation(token: string, userId: string): Promise<{
         user: {
@@ -247,10 +247,10 @@ export declare class ProjectService {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     }>;
     getPendingInvitations(userId: string): Promise<({
         project: {
@@ -271,10 +271,10 @@ export declare class ProjectService {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     })[]>;
     getProjectMembers(projectId: string, userId: string): Promise<({
         user: {
@@ -302,10 +302,10 @@ export declare class ProjectService {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     })[]>;
     updateMemberRole(projectId: string, memberId: string, dto: UpdateMemberRoleDto, userId: string): Promise<{
         user: {
@@ -334,9 +334,9 @@ export declare class ProjectService {
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
         status: import(".prisma/client").$Enums.InvitationStatus;
+        inviterId: string;
         token: string;
         projectId: string;
         expiresAt: Date;
-        inviterId: string;
     }>;
 }

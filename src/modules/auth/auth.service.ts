@@ -47,7 +47,7 @@ export class AuthService {
     const slug = `ws-${user.id.slice(0, 8)}-${Date.now()}`;
     await this.prisma.workspace.create({
       data: {
-        name: 'My Workspace',
+        name: 'My Team',
         slug,
         members: {
           create: {

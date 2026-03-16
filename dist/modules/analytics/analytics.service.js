@@ -19,19 +19,13 @@ let AnalyticsService = class AnalyticsService {
     async getWorkspaceStats(workspaceId, userId) {
         let projectFilter = { workspaceId };
         if (userId) {
-            const wsMember = await this.prisma.workspaceMember.findUnique({
-                where: { userId_workspaceId: { userId, workspaceId } },
-            });
-            const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
-            if (!isWsAdmin) {
-                projectFilter = {
-                    workspaceId,
-                    OR: [
-                        { members: { some: { userId } } },
-                        { visibility: 'PUBLIC' },
-                    ],
-                };
-            }
+            projectFilter = {
+                workspaceId,
+                OR: [
+                    { members: { some: { userId } } },
+                    { visibility: 'PUBLIC' },
+                ],
+            };
         }
         const [totalProjects, activeProjects, completedProjects, archivedProjects,] = await Promise.all([
             this.prisma.project.count({ where: projectFilter }),
@@ -208,19 +202,13 @@ let AnalyticsService = class AnalyticsService {
     async getOverviewStats(workspaceId, userId) {
         let projectFilter = { workspaceId };
         if (userId) {
-            const wsMember = await this.prisma.workspaceMember.findUnique({
-                where: { userId_workspaceId: { userId, workspaceId } },
-            });
-            const isWsAdmin = wsMember && ['OWNER', 'ADMIN'].includes(wsMember.role);
-            if (!isWsAdmin) {
-                projectFilter = {
-                    workspaceId,
-                    OR: [
-                        { members: { some: { userId } } },
-                        { visibility: 'PUBLIC' },
-                    ],
-                };
-            }
+            projectFilter = {
+                workspaceId,
+                OR: [
+                    { members: { some: { userId } } },
+                    { visibility: 'PUBLIC' },
+                ],
+            };
         }
         const allTasks = await this.prisma.task.findMany({
             where: {
