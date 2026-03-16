@@ -126,7 +126,7 @@ export class WorkspaceService {
     await this.ensureRole(workspaceId, userId, [
       WorkspaceRole.OWNER,
       WorkspaceRole.ADMIN,
-    ], 'Anda tidak dapat mengedit workspace milik user lain.');
+    ], 'You cannot edit another user\'s workspace.');
 
     const data: { name?: string; description?: string | null } = {};
 
