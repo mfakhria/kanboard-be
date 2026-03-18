@@ -28,7 +28,7 @@ export declare class AuthService {
             avatar: string | null;
         };
     }>;
-    refresh(userId: string, email: string): Promise<{
+    refresh(userId: string): Promise<{
         accessToken: string;
         refreshToken: string;
         user: {

@@ -30,7 +30,7 @@ let AuthController = class AuthController {
         return this.authService.login(dto);
     }
     async refresh(user) {
-        return this.authService.refresh(user.id, user.email);
+        return this.authService.refresh(user.id);
     }
     async getProfile(userId) {
         return this.authService.getProfile(userId);

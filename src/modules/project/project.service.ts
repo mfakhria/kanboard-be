@@ -136,7 +136,9 @@ export class ProjectService {
         })
         .reduce((sum, c) => sum + c._count.tasks, 0);
 
-      const { boards, members, ...rest } = p;
+      const { members, ...restWithBoards } = p;
+      const rest: typeof restWithBoards = { ...restWithBoards };
+      delete (rest as Partial<typeof restWithBoards>).boards;
       const isWsAdmin = ['OWNER', 'ADMIN'].includes(wsMember.role);
       const myRole = members[0]?.role ?? (isWsAdmin ? 'ADMIN' : null);
       return { ...rest, totalTasks, completedTasks, myRole };

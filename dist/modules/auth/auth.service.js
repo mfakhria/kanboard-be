@@ -84,7 +84,7 @@ let AuthService = class AuthService {
             ...tokens,
         };
     }
-    async refresh(userId, email) {
+    async refresh(userId) {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             select: {

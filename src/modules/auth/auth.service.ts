@@ -94,7 +94,7 @@ export class AuthService {
     };
   }
 
-  async refresh(userId: string, email: string) {
+  async refresh(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {

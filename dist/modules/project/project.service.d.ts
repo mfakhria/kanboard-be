@@ -51,6 +51,27 @@ export declare class ProjectService {
             id: string;
             avatar: string | null;
         } | null;
+        boards: ({
+            columns: ({
+                _count: {
+                    tasks: number;
+                };
+            } & {
+                name: string;
+                id: string;
+                createdAt: Date;
+                updatedAt: Date;
+                color: string | null;
+                position: number;
+                boardId: string;
+            })[];
+        } & {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            projectId: string;
+        })[];
         name: string;
         id: string;
         createdAt: Date;
@@ -128,10 +149,10 @@ export declare class ProjectService {
                     dueDate: Date | null;
                     position: number;
                     title: string;
-                    columnId: string;
                     priority: import(".prisma/client").$Enums.TaskPriority;
-                    assigneeId: string | null;
                     completed: boolean;
+                    columnId: string;
+                    assigneeId: string | null;
                     creatorId: string;
                 })[];
             } & {

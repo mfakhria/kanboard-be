@@ -2,7 +2,11 @@
 node_modules/
 
 # Build
-# dist/ is needed for Vercel deployment
+dist/
+
+# Tooling caches and reports
+coverage/
+.eslintcache
 
 # Environment
 .env

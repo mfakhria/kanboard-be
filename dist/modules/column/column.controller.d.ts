@@ -12,10 +12,10 @@ export declare class ColumnController {
             dueDate: Date | null;
             position: number;
             title: string;
-            columnId: string;
             priority: import(".prisma/client").$Enums.TaskPriority;
-            assigneeId: string | null;
             completed: boolean;
+            columnId: string;
+            assigneeId: string | null;
             creatorId: string;
         }[];
     } & {
