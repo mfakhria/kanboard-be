@@ -182,10 +182,10 @@ export declare class ProjectController {
                     dueDate: Date | null;
                     position: number;
                     title: string;
-                    priority: import(".prisma/client").$Enums.TaskPriority;
-                    completed: boolean;
                     columnId: string;
+                    priority: import(".prisma/client").$Enums.TaskPriority;
                     assigneeId: string | null;
+                    completed: boolean;
                     creatorId: string;
                 })[];
             } & {

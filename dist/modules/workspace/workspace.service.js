@@ -116,7 +116,7 @@ let WorkspaceService = class WorkspaceService {
         await this.ensureRole(workspaceId, userId, [
             client_1.WorkspaceRole.OWNER,
             client_1.WorkspaceRole.ADMIN,
-        ], 'Anda tidak dapat mengedit workspace milik user lain.');
+        ], 'You cannot edit another user\'s workspace.');
         const data = {};
         if (typeof dto.name === 'string') {
             const trimmed = dto.name.trim();

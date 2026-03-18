@@ -8,18 +8,18 @@ export declare class BoardController {
                 _count: {
                     comments: number;
                 };
-                assignee: {
-                    name: string;
-                    email: string;
-                    id: string;
-                    avatar: string | null;
-                } | null;
                 labels: {
                     name: string;
                     id: string;
                     color: string;
                     taskId: string;
                 }[];
+                assignee: {
+                    name: string;
+                    email: string;
+                    id: string;
+                    avatar: string | null;
+                } | null;
             } & {
                 id: string;
                 createdAt: Date;
@@ -28,10 +28,10 @@ export declare class BoardController {
                 dueDate: Date | null;
                 position: number;
                 title: string;
-                priority: import(".prisma/client").$Enums.TaskPriority;
-                completed: boolean;
                 columnId: string;
+                priority: import(".prisma/client").$Enums.TaskPriority;
                 assigneeId: string | null;
+                completed: boolean;
                 creatorId: string;
             })[];
         } & {
@@ -56,18 +56,18 @@ export declare class BoardController {
                 _count: {
                     comments: number;
                 };
-                assignee: {
-                    name: string;
-                    email: string;
-                    id: string;
-                    avatar: string | null;
-                } | null;
                 labels: {
                     name: string;
                     id: string;
                     color: string;
                     taskId: string;
                 }[];
+                assignee: {
+                    name: string;
+                    email: string;
+                    id: string;
+                    avatar: string | null;
+                } | null;
             } & {
                 id: string;
                 createdAt: Date;
@@ -76,10 +76,10 @@ export declare class BoardController {
                 dueDate: Date | null;
                 position: number;
                 title: string;
-                priority: import(".prisma/client").$Enums.TaskPriority;
-                completed: boolean;
                 columnId: string;
+                priority: import(".prisma/client").$Enums.TaskPriority;
                 assigneeId: string | null;
+                completed: boolean;
                 creatorId: string;
             })[];
         } & {
