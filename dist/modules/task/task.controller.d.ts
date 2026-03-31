@@ -3,6 +3,7 @@ import { CreateTaskDto, UpdateTaskDto, MoveTaskDto, SubmitTaskReviewDto, DecideT
 export declare class TaskController {
     private readonly taskService;
     constructor(taskService: TaskService);
+    private static readonly allowedAttachmentMimeTypes;
     private static getUploadDestination;
     findAll(workspaceId: string, userId: string): Promise<({
         column: {

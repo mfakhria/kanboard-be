@@ -33,6 +33,9 @@ import { CurrentUser } from '../../common/decorators';
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
 
+  private static readonly allowedAttachmentMimeTypes =
+    /^(image\/(jpeg|png|gif|webp)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/vnd\.ms-excel|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|application\/vnd\.ms-powerpoint|application\/vnd\.openxmlformats-officedocument\.presentationml\.presentation|text\/plain|text\/csv|application\/zip|application\/x-zip-compressed)$/i;
+
   private static getUploadDestination() {
     const destination = join(process.cwd(), 'uploads', 'task-attachments');
     if (!existsSync(destination)) {
@@ -148,7 +151,7 @@ export class TaskController {
     @UploadedFile(
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
-          fileType: /(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)$/i,
+          fileType: TaskController.allowedAttachmentMimeTypes,
         })
         .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 })
         .build({

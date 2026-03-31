@@ -74,6 +74,7 @@ let TaskController = class TaskController {
     }
 };
 exports.TaskController = TaskController;
+TaskController.allowedAttachmentMimeTypes = /^(image\/(jpeg|png|gif|webp)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/vnd\.ms-excel|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|application\/vnd\.ms-powerpoint|application\/vnd\.openxmlformats-officedocument\.presentationml\.presentation|text\/plain|text\/csv|application\/zip|application\/x-zip-compressed)$/i;
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, common_1.Query)('workspaceId')),
@@ -182,7 +183,7 @@ __decorate([
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.UploadedFile)(new common_1.ParseFilePipeBuilder()
         .addFileTypeValidator({
-        fileType: /(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)$/i,
+        fileType: TaskController.allowedAttachmentMimeTypes,
     })
         .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 })
         .build({
