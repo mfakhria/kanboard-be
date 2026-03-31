@@ -300,6 +300,14 @@ export class TaskService {
   async move(taskId: string, dto: MoveTaskDto, userId: string) {
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
+      include: {
+        column: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     });
 
     if (!task) {
@@ -417,6 +425,7 @@ export class TaskService {
         metadata: {
           taskTitle: movedTask.title,
           fromColumnId: task.columnId,
+          fromColumnName: task.column.name,
           fromPosition: task.position,
           toColumnId: dto.columnId,
           toPosition: dto.position,

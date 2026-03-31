@@ -286,6 +286,14 @@ let TaskService = class TaskService {
     async move(taskId, dto, userId) {
         const task = await this.prisma.task.findUnique({
             where: { id: taskId },
+            include: {
+                column: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
         });
         if (!task) {
             throw new common_1.NotFoundException('Task not found');
@@ -390,6 +398,7 @@ let TaskService = class TaskService {
                 metadata: {
                     taskTitle: movedTask.title,
                     fromColumnId: task.columnId,
+                    fromColumnName: task.column.name,
                     fromPosition: task.position,
                     toColumnId: dto.columnId,
                     toPosition: dto.position,

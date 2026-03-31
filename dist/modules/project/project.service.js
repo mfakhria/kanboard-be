@@ -504,6 +504,11 @@ let ProjectService = class ProjectService {
         await this.ensureProjectAdmin(projectId, userId);
         const member = await this.prisma.projectMember.findUnique({
             where: { id: memberId, projectId },
+            include: {
+                user: {
+                    select: { id: true, name: true, email: true, avatar: true },
+                },
+            },
         });
         if (!member) {
             throw new common_1.NotFoundException('Member not found');
@@ -534,6 +539,7 @@ let ProjectService = class ProjectService {
             metadata: {
                 memberName: updatedMember.user.name,
                 memberEmail: updatedMember.user.email,
+                previousRole: member.role,
                 role: dto.role,
             },
         });
@@ -543,6 +549,11 @@ let ProjectService = class ProjectService {
         await this.ensureProjectAdmin(projectId, userId);
         const member = await this.prisma.projectMember.findUnique({
             where: { id: memberId, projectId },
+            include: {
+                user: {
+                    select: { id: true, name: true, email: true, avatar: true },
+                },
+            },
         });
         if (!member) {
             throw new common_1.NotFoundException('Member not found');
@@ -560,6 +571,8 @@ let ProjectService = class ProjectService {
             userId,
             projectId,
             metadata: {
+                memberName: member.user.name,
+                memberEmail: member.user.email,
                 removedUserId: removedMember.userId,
                 role: removedMember.role,
             },
