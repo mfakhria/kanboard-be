@@ -10,13 +10,17 @@ export declare class ColumnController {
             updatedAt: Date;
             description: string | null;
             title: string;
+            reviewDueDate: Date | null;
             dueDate: Date | null;
             position: number;
             priority: import(".prisma/client").$Enums.TaskPriority;
             completed: boolean;
+            approvalStatus: import(".prisma/client").$Enums.TaskApprovalStatus;
+            reviewSubmittedAt: Date | null;
             columnId: string;
             assigneeId: string | null;
             creatorId: string;
+            reviewerId: string | null;
         }[];
     } & {
         name: string;

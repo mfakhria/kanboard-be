@@ -25,12 +25,15 @@ model User {
   receivedWorkspaceInvitations WorkspaceInvitation[] @relation("WorkspaceInvitationInvitee")
   assignedTasks    Task[]           @relation("TaskAssignee")
   createdTasks     Task[]           @relation("TaskCreator")
+  reviewTasks      Task[]           @relation("TaskReviewer")
   picProjects      Project[]        @relation("ProjectPic")
   projectMembers   ProjectMember[]
   projectInvitations ProjectInvitation[]
   comments         Comment[]
   uploadedAttachments TaskAttachment[]
   activityLogs     ActivityLog[]
+  taskReviewActions TaskReview[]    @relation("TaskReviewActor")
+  taskReviewAssignments TaskReview[] @relation("TaskReviewReviewer")
   notifications    Notification[]         @relation("NotificationUser")
   actedNotifications Notification[]       @relation("NotificationActor")
   notificationPreference NotificationPreference?
@@ -258,6 +261,20 @@ enum TaskPriority {
   URGENT
 }
 
+enum TaskApprovalStatus {
+  NONE
+  IN_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+}
+
+enum TaskReviewAction {
+  SUBMITTED
+  APPROVED
+  CHANGES_REQUESTED
+  CANCELLED
+}
+
 model Task {
   id          String       @id @default(uuid())
   title       String
@@ -266,6 +283,9 @@ model Task {
   priority    TaskPriority @default(MEDIUM)
   dueDate     DateTime?    @map("due_date")
   completed   Boolean      @default(false)
+  approvalStatus TaskApprovalStatus @default(NONE) @map("approval_status")
+  reviewSubmittedAt DateTime? @map("review_submitted_at")
+  reviewDueDate DateTime? @map("review_due_date")
   createdAt   DateTime     @default(now()) @map("created_at")
   updatedAt   DateTime     @updatedAt @map("updated_at")
 
@@ -278,15 +298,20 @@ model Task {
   creatorId   String  @map("creator_id")
   creator     User    @relation("TaskCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
+  reviewerId  String? @map("reviewer_id")
+  reviewer    User?   @relation("TaskReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
   // Relations
   comments Comment[]
   labels   TaskLabel[]
   attachments TaskAttachment[]
+  reviews TaskReview[]
 
   @@index([columnId])
   @@index([columnId, position])
   @@index([assigneeId])
   @@index([creatorId])
+  @@index([reviewerId])
   @@map("tasks")
 }
 
@@ -356,6 +381,27 @@ model TaskAttachment {
   @@index([taskId])
   @@index([uploaderId])
   @@map("task_attachments")
+}
+
+model TaskReview {
+  id        String           @id @default(uuid())
+  action    TaskReviewAction
+  comment   String?
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  taskId    String @map("task_id")
+  task      Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  actorId   String @map("actor_id")
+  actor     User   @relation("TaskReviewActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  reviewerId String? @map("reviewer_id")
+  reviewer   User?   @relation("TaskReviewReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+
+  @@index([taskId, createdAt])
+  @@index([actorId])
+  @@index([reviewerId])
+  @@map("task_reviews")
 }
 
 // ─── Activity Log ────────────────────────────────────────────────────────────

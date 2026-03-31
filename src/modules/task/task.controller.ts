@@ -18,7 +18,13 @@ import { diskStorage } from 'multer';
 import { extname, join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { TaskService } from './task.service';
-import { CreateTaskDto, UpdateTaskDto, MoveTaskDto } from './dto';
+import {
+  CreateTaskDto,
+  UpdateTaskDto,
+  MoveTaskDto,
+  SubmitTaskReviewDto,
+  DecideTaskReviewDto,
+} from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators';
 
@@ -98,6 +104,32 @@ export class TaskController {
     @CurrentUser('id') userId: string,
   ) {
     return this.taskService.addComment(taskId, content, userId);
+  }
+
+  @Post(':id/review/submit')
+  async submitForReview(
+    @Param('id') taskId: string,
+    @Body() dto: SubmitTaskReviewDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.submitForReview(taskId, dto, userId);
+  }
+
+  @Post(':id/review/decision')
+  async decideReview(
+    @Param('id') taskId: string,
+    @Body() dto: DecideTaskReviewDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.decideReview(taskId, dto, userId);
+  }
+
+  @Post(':id/review/cancel')
+  async cancelReview(
+    @Param('id') taskId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.cancelReview(taskId, userId);
   }
 
   @Post(':id/attachments')

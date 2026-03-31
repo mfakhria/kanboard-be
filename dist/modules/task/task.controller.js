@@ -57,6 +57,15 @@ let TaskController = class TaskController {
     async addComment(taskId, content, userId) {
         return this.taskService.addComment(taskId, content, userId);
     }
+    async submitForReview(taskId, dto, userId) {
+        return this.taskService.submitForReview(taskId, dto, userId);
+    }
+    async decideReview(taskId, dto, userId) {
+        return this.taskService.decideReview(taskId, dto, userId);
+    }
+    async cancelReview(taskId, userId) {
+        return this.taskService.cancelReview(taskId, userId);
+    }
     async uploadAttachment(taskId, file, userId) {
         return this.taskService.addAttachment(taskId, file, userId);
     }
@@ -132,6 +141,32 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], TaskController.prototype, "addComment", null);
+__decorate([
+    (0, common_1.Post)(':id/review/submit'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, dto_1.SubmitTaskReviewDto, String]),
+    __metadata("design:returntype", Promise)
+], TaskController.prototype, "submitForReview", null);
+__decorate([
+    (0, common_1.Post)(':id/review/decision'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, dto_1.DecideTaskReviewDto, String]),
+    __metadata("design:returntype", Promise)
+], TaskController.prototype, "decideReview", null);
+__decorate([
+    (0, common_1.Post)(':id/review/cancel'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], TaskController.prototype, "cancelReview", null);
 __decorate([
     (0, common_1.Post)(':id/attachments'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {

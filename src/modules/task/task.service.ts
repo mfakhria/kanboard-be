@@ -1,7 +1,23 @@
-import { ActivityAction, Prisma } from '@prisma/client';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ActivityAction,
+  Prisma,
+  TaskApprovalStatus,
+  TaskReviewAction,
+} from '@prisma/client';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateTaskDto, UpdateTaskDto, MoveTaskDto } from './dto';
+import {
+  CreateTaskDto,
+  UpdateTaskDto,
+  MoveTaskDto,
+  SubmitTaskReviewDto,
+  DecideTaskReviewDto,
+} from './dto';
 import { NotificationService } from '../notification/notification.service';
 import { join } from 'path';
 import { existsSync, unlinkSync } from 'fs';
@@ -30,6 +46,9 @@ export class TaskService {
       },
       include: {
         assignee: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+        reviewer: {
           select: { id: true, name: true, email: true, avatar: true },
         },
         creator: {
@@ -98,6 +117,14 @@ export class TaskService {
             avatar: true,
           },
         },
+        reviewer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
         creator: {
           select: {
             id: true,
@@ -145,6 +172,14 @@ export class TaskService {
       where: { id: taskId },
       include: {
         assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        reviewer: {
           select: {
             id: true,
             name: true,
@@ -200,6 +235,27 @@ export class TaskService {
             },
           },
         },
+        reviews: {
+          include: {
+            actor: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              },
+            },
+            reviewer: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatar: true,
+              },
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
 
@@ -253,6 +309,14 @@ export class TaskService {
       },
       include: {
         assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        reviewer: {
           select: {
             id: true,
             name: true,
@@ -417,6 +481,14 @@ export class TaskService {
               avatar: true,
             },
           },
+          reviewer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            },
+          },
           labels: true,
           _count: {
             select: { comments: true, attachments: true },
@@ -498,6 +570,14 @@ export class TaskService {
       data: { assigneeId },
       include: {
         assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        reviewer: {
           select: {
             id: true,
             name: true,
@@ -597,6 +677,213 @@ export class TaskService {
     });
 
     return comment;
+  }
+
+  async submitForReview(taskId: string, dto: SubmitTaskReviewDto, userId: string) {
+    const task = await this.getTaskReviewContext(taskId);
+
+    this.ensureCanSubmitForReview(task, userId);
+
+    const reviewerId = dto.reviewerId ?? task.reviewerId;
+    if (!reviewerId) {
+      throw new BadRequestException('Please choose a reviewer before submitting');
+    }
+
+    if (reviewerId === userId) {
+      throw new BadRequestException('Reviewer must be different from the submitter');
+    }
+
+    this.ensureValidReviewer(task, reviewerId);
+
+    const reviewDueDate = dto.reviewDueDate ? new Date(dto.reviewDueDate) : task.reviewDueDate;
+
+    const updatedTask = await this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        reviewerId,
+        reviewDueDate: reviewDueDate ?? undefined,
+        reviewSubmittedAt: new Date(),
+        approvalStatus: TaskApprovalStatus.IN_REVIEW,
+      },
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        reviewer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        labels: true,
+        _count: {
+          select: { comments: true, attachments: true },
+        },
+      },
+    });
+
+    await this.prisma.taskReview.create({
+      data: {
+        taskId,
+        actorId: userId,
+        reviewerId,
+        action: TaskReviewAction.SUBMITTED,
+        comment: dto.comment?.trim() || undefined,
+      },
+    });
+
+    await this.logActivity({
+      action: ActivityAction.UPDATED,
+      entity: 'task_review',
+      entityId: taskId,
+      userId,
+      projectId: task.column.board.project.id,
+      metadata: {
+        taskTitle: task.title,
+        projectName: task.column.board.project.name,
+        reviewAction: TaskReviewAction.SUBMITTED,
+        reviewerId,
+        reviewerName: updatedTask.reviewer?.name ?? null,
+        reviewDueDate: reviewDueDate?.toISOString() ?? null,
+        commentPreview: dto.comment?.slice(0, 120) ?? null,
+      },
+    });
+
+    if (updatedTask.reviewer && updatedTask.reviewer.id !== userId) {
+      await this.notificationService.notifyTaskReviewSubmitted({
+        userId: updatedTask.reviewer.id,
+        actorId: userId,
+        taskId: updatedTask.id,
+        taskTitle: updatedTask.title,
+        projectId: task.column.board.project.id,
+        projectName: task.column.board.project.name,
+        reviewDueDate,
+      });
+    }
+
+    return this.findById(taskId);
+  }
+
+  async decideReview(taskId: string, dto: DecideTaskReviewDto, userId: string) {
+    if (![TaskReviewAction.APPROVED, TaskReviewAction.CHANGES_REQUESTED].includes(dto.decision)) {
+      throw new BadRequestException('Unsupported review decision');
+    }
+
+    const task = await this.getTaskReviewContext(taskId);
+
+    if (task.approvalStatus !== TaskApprovalStatus.IN_REVIEW) {
+      throw new BadRequestException('This task is not currently in review');
+    }
+
+    this.ensureCanDecideReview(task, userId);
+
+    const approvalStatus = dto.decision === TaskReviewAction.APPROVED
+      ? TaskApprovalStatus.APPROVED
+      : TaskApprovalStatus.CHANGES_REQUESTED;
+
+    await this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        approvalStatus,
+        reviewSubmittedAt: null,
+      },
+    });
+
+    await this.prisma.taskReview.create({
+      data: {
+        taskId,
+        actorId: userId,
+        reviewerId: task.reviewerId ?? userId,
+        action: dto.decision,
+        comment: dto.comment?.trim() || undefined,
+      },
+    });
+
+    await this.logActivity({
+      action: ActivityAction.UPDATED,
+      entity: 'task_review',
+      entityId: taskId,
+      userId,
+      projectId: task.column.board.project.id,
+      metadata: {
+        taskTitle: task.title,
+        projectName: task.column.board.project.name,
+        reviewAction: dto.decision,
+        reviewerId: task.reviewerId,
+        reviewerName: task.reviewer?.name ?? null,
+        commentPreview: dto.comment?.slice(0, 120) ?? null,
+      },
+    });
+
+    const notifyUserIds = new Set(
+      [task.creatorId, task.assigneeId].filter((candidate): candidate is string => !!candidate && candidate !== userId),
+    );
+
+    for (const recipientId of notifyUserIds) {
+      await this.notificationService.notifyTaskReviewDecision({
+        userId: recipientId,
+        actorId: userId,
+        taskId: task.id,
+        taskTitle: task.title,
+        projectId: task.column.board.project.id,
+        projectName: task.column.board.project.name,
+        decision: dto.decision,
+        comment: dto.comment,
+      });
+    }
+
+    return this.findById(taskId);
+  }
+
+  async cancelReview(taskId: string, userId: string) {
+    const task = await this.getTaskReviewContext(taskId);
+
+    if (task.approvalStatus !== TaskApprovalStatus.IN_REVIEW) {
+      throw new BadRequestException('This task is not currently in review');
+    }
+
+    this.ensureCanSubmitForReview(task, userId);
+
+    await this.prisma.task.update({
+      where: { id: taskId },
+      data: {
+        approvalStatus: TaskApprovalStatus.NONE,
+        reviewSubmittedAt: null,
+      },
+    });
+
+    await this.prisma.taskReview.create({
+      data: {
+        taskId,
+        actorId: userId,
+        reviewerId: task.reviewerId ?? undefined,
+        action: TaskReviewAction.CANCELLED,
+      },
+    });
+
+    await this.logActivity({
+      action: ActivityAction.UPDATED,
+      entity: 'task_review',
+      entityId: taskId,
+      userId,
+      projectId: task.column.board.project.id,
+      metadata: {
+        taskTitle: task.title,
+        projectName: task.column.board.project.name,
+        reviewAction: TaskReviewAction.CANCELLED,
+        reviewerId: task.reviewerId,
+        reviewerName: task.reviewer?.name ?? null,
+      },
+    });
+
+    return this.findById(taskId);
   }
 
   async addAttachment(taskId: string, file: any, userId: string) {
@@ -747,5 +1034,85 @@ export class TaskService {
         color: label.color?.trim() || '#6366f1',
       }))
       .filter((label) => label.name.length > 0);
+  }
+
+  private async getTaskReviewContext(taskId: string) {
+    const task = await this.prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        reviewer: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+        column: {
+          include: {
+            board: {
+              include: {
+                project: {
+                  include: {
+                    members: {
+                      select: {
+                        userId: true,
+                        role: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!task) {
+      throw new NotFoundException('Task not found');
+    }
+
+    return task;
+  }
+
+  private ensureCanSubmitForReview(task: Awaited<ReturnType<TaskService['getTaskReviewContext']>>, userId: string) {
+    const member = task.column.board.project.members.find(projectMember => projectMember.userId === userId);
+    const role = member?.role;
+
+    if (!member) {
+      throw new ForbiddenException('You do not have access to this task');
+    }
+
+    if (role === 'VIEWER') {
+      throw new ForbiddenException('Viewers cannot submit tasks for review');
+    }
+  }
+
+  private ensureCanDecideReview(task: Awaited<ReturnType<TaskService['getTaskReviewContext']>>, userId: string) {
+    const member = task.column.board.project.members.find(projectMember => projectMember.userId === userId);
+    const role = member?.role;
+
+    if (task.reviewerId === userId) {
+      return;
+    }
+
+    if (role === 'OWNER' || role === 'ADMIN') {
+      return;
+    }
+
+    throw new ForbiddenException('Only the assigned reviewer or project admin can decide this review');
+  }
+
+  private ensureValidReviewer(task: Awaited<ReturnType<TaskService['getTaskReviewContext']>>, reviewerId: string) {
+    const reviewerMembership = task.column.board.project.members.find(projectMember => projectMember.userId === reviewerId);
+
+    if (!reviewerMembership) {
+      throw new BadRequestException('Reviewer must belong to this project');
+    }
+
+    if (reviewerMembership.role === 'VIEWER') {
+      throw new BadRequestException('Viewer cannot be assigned as reviewer');
+    }
   }
 }

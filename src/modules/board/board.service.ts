@@ -21,6 +21,14 @@ export class BoardService {
                     avatar: true,
                   },
                 },
+                reviewer: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    avatar: true,
+                  },
+                },
                 labels: true,
                 _count: {
                   select: { comments: true, attachments: true },
@@ -44,6 +52,14 @@ export class BoardService {
             tasks: {
               include: {
                 assignee: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    avatar: true,
+                  },
+                },
+                reviewer: {
                   select: {
                     id: true,
                     name: true,

@@ -192,6 +192,67 @@ export class NotificationService {
     });
   }
 
+  async notifyTaskReviewSubmitted(params: {
+    userId: string;
+    actorId: string;
+    taskId: string;
+    taskTitle: string;
+    projectId?: string | null;
+    projectName?: string | null;
+    reviewDueDate?: Date | null;
+  }) {
+    return this.createNotification({
+      userId: params.userId,
+      actorId: params.actorId,
+      type: NotificationType.GENERAL,
+      title: 'Task submitted for review',
+      message: `A review was requested for "${params.taskTitle}".`,
+      metadata: {
+        taskId: params.taskId,
+        taskTitle: params.taskTitle,
+        projectId: params.projectId,
+        projectName: params.projectName,
+        reviewDueDate: params.reviewDueDate?.toISOString() ?? null,
+        reviewAction: 'SUBMITTED',
+      },
+    });
+  }
+
+  async notifyTaskReviewDecision(params: {
+    userId: string;
+    actorId: string;
+    taskId: string;
+    taskTitle: string;
+    projectId?: string | null;
+    projectName?: string | null;
+    decision: 'APPROVED' | 'CHANGES_REQUESTED';
+    comment?: string | null;
+  }) {
+    const title = params.decision === 'APPROVED'
+      ? 'Task approved'
+      : 'Changes requested on task';
+
+    const message = params.decision === 'APPROVED'
+      ? `Your task "${params.taskTitle}" has been approved.`
+      : `Changes were requested for "${params.taskTitle}".`;
+
+    return this.createNotification({
+      userId: params.userId,
+      actorId: params.actorId,
+      type: NotificationType.GENERAL,
+      title,
+      message,
+      metadata: {
+        taskId: params.taskId,
+        taskTitle: params.taskTitle,
+        projectId: params.projectId,
+        projectName: params.projectName,
+        reviewAction: params.decision,
+        reviewComment: params.comment ?? null,
+      },
+    });
+  }
+
   private async ensurePreferences(userId: string) {
     return this.prisma.notificationPreference.upsert({
       where: { userId },
