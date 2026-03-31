@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ProjectService } from './project.service';
-import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, AcceptInvitationDto, UpdateMemberRoleDto } from './dto';
+import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, AcceptInvitationDto, UpdateMemberRoleDto, CreateProjectLabelDto, UpdateProjectLabelDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators';
 
@@ -135,5 +135,41 @@ export class ProjectController {
     @CurrentUser('id') userId: string,
   ) {
     return this.projectService.cancelInvitation(invitationId, userId);
+  }
+
+  @Get(':id/labels')
+  async getLabels(
+    @Param('id') projectId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.projectService.getProjectLabels(projectId, userId);
+  }
+
+  @Post(':id/labels')
+  async createLabel(
+    @Param('id') projectId: string,
+    @Body() dto: CreateProjectLabelDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.projectService.createProjectLabel(projectId, dto, userId);
+  }
+
+  @Patch(':id/labels/:labelId')
+  async updateLabel(
+    @Param('id') projectId: string,
+    @Param('labelId') labelId: string,
+    @Body() dto: UpdateProjectLabelDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.projectService.updateProjectLabel(projectId, labelId, dto, userId);
+  }
+
+  @Delete(':id/labels/:labelId')
+  async deleteLabel(
+    @Param('id') projectId: string,
+    @Param('labelId') labelId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.projectService.deleteProjectLabel(projectId, labelId, userId);
   }
 }

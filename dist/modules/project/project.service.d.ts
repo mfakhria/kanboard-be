@@ -1,5 +1,5 @@
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, UpdateMemberRoleDto } from './dto';
+import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, UpdateMemberRoleDto, CreateProjectLabelDto, UpdateProjectLabelDto } from './dto';
 import { NotificationService } from '../notification/notification.service';
 export declare class ProjectService {
     private readonly prisma;
@@ -29,6 +29,14 @@ export declare class ProjectService {
             updatedAt: Date;
             projectId: string;
         })[];
+        labels: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            projectId: string;
+            color: string;
+        }[];
     } & {
         name: string;
         id: string;
@@ -74,6 +82,14 @@ export declare class ProjectService {
             updatedAt: Date;
             projectId: string;
         })[];
+        labels: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            projectId: string;
+            color: string;
+        }[];
         name: string;
         id: string;
         createdAt: Date;
@@ -173,6 +189,14 @@ export declare class ProjectService {
             updatedAt: Date;
             projectId: string;
         })[];
+        labels: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            projectId: string;
+            color: string;
+        }[];
     } & {
         name: string;
         id: string;
@@ -361,6 +385,38 @@ export declare class ProjectService {
         inviterId: string;
         token: string;
         expiresAt: Date;
+    }>;
+    getProjectLabels(projectId: string, userId: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        projectId: string;
+        color: string;
+    }[]>;
+    createProjectLabel(projectId: string, dto: CreateProjectLabelDto, userId: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        projectId: string;
+        color: string;
+    }>;
+    updateProjectLabel(projectId: string, labelId: string, dto: UpdateProjectLabelDto, userId: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        projectId: string;
+        color: string;
+    }>;
+    deleteProjectLabel(projectId: string, labelId: string, userId: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        projectId: string;
+        color: string;
     }>;
     private logActivity;
 }

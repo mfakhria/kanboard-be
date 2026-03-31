@@ -17,4 +17,5 @@ Object.defineProperty(exports, "__esModule", { value: true });
 __exportStar(require("./create-project.dto"), exports);
 __exportStar(require("./update-project.dto"), exports);
 __exportStar(require("./invite-project.dto"), exports);
+__exportStar(require("./project-label.dto"), exports);
 //# sourceMappingURL=index.js.map

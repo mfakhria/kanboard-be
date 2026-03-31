@@ -18,6 +18,12 @@ export declare class TaskService {
         _count: {
             comments: number;
         };
+        labels: {
+            name: string;
+            id: string;
+            taskId: string;
+            color: string;
+        }[];
         assignee: {
             name: string;
             email: string;
@@ -30,12 +36,6 @@ export declare class TaskService {
             id: string;
             avatar: string | null;
         };
-        labels: {
-            name: string;
-            id: string;
-            taskId: string;
-            color: string;
-        }[];
     } & {
         id: string;
         createdAt: Date;
@@ -54,6 +54,12 @@ export declare class TaskService {
         _count: {
             comments: number;
         };
+        labels: {
+            name: string;
+            id: string;
+            taskId: string;
+            color: string;
+        }[];
         assignee: {
             name: string;
             email: string;
@@ -66,12 +72,6 @@ export declare class TaskService {
             id: string;
             avatar: string | null;
         };
-        labels: {
-            name: string;
-            id: string;
-            taskId: string;
-            color: string;
-        }[];
     } & {
         id: string;
         createdAt: Date;
@@ -111,6 +111,12 @@ export declare class TaskService {
             content: string;
             authorId: string;
         })[];
+        labels: {
+            name: string;
+            id: string;
+            taskId: string;
+            color: string;
+        }[];
         assignee: {
             name: string;
             email: string;
@@ -123,12 +129,6 @@ export declare class TaskService {
             id: string;
             avatar: string | null;
         };
-        labels: {
-            name: string;
-            id: string;
-            taskId: string;
-            color: string;
-        }[];
     } & {
         id: string;
         createdAt: Date;
@@ -147,18 +147,18 @@ export declare class TaskService {
         _count: {
             comments: number;
         };
-        assignee: {
-            name: string;
-            email: string;
-            id: string;
-            avatar: string | null;
-        } | null;
         labels: {
             name: string;
             id: string;
             taskId: string;
             color: string;
         }[];
+        assignee: {
+            name: string;
+            email: string;
+            id: string;
+            avatar: string | null;
+        } | null;
     } & {
         id: string;
         createdAt: Date;
@@ -191,18 +191,18 @@ export declare class TaskService {
         _count: {
             comments: number;
         };
-        assignee: {
-            name: string;
-            email: string;
-            id: string;
-            avatar: string | null;
-        } | null;
         labels: {
             name: string;
             id: string;
             taskId: string;
             color: string;
         }[];
+        assignee: {
+            name: string;
+            email: string;
+            id: string;
+            avatar: string | null;
+        } | null;
     } & {
         id: string;
         createdAt: Date;

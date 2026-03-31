@@ -52,6 +52,9 @@ let ProjectService = class ProjectService {
                 },
             },
             include: {
+                labels: {
+                    orderBy: { name: 'asc' },
+                },
                 pic: {
                     select: {
                         id: true,
@@ -110,6 +113,9 @@ let ProjectService = class ProjectService {
                 ],
             },
             include: {
+                labels: {
+                    orderBy: { name: 'asc' },
+                },
                 pic: {
                     select: {
                         id: true,
@@ -155,6 +161,9 @@ let ProjectService = class ProjectService {
         const project = await this.prisma.project.findUnique({
             where: { id: projectId },
             include: {
+                labels: {
+                    orderBy: { name: 'asc' },
+                },
                 pic: {
                     select: {
                         id: true,
@@ -590,6 +599,113 @@ let ProjectService = class ProjectService {
         return this.prisma.projectInvitation.delete({
             where: { id: invitationId },
         });
+    }
+    async getProjectLabels(projectId, userId) {
+        await this.findById(projectId, userId);
+        return this.prisma.projectLabel.findMany({
+            where: { projectId },
+            orderBy: { name: 'asc' },
+        });
+    }
+    async createProjectLabel(projectId, dto, userId) {
+        await this.ensureProjectAdmin(projectId, userId);
+        const name = dto.name.trim();
+        const existing = await this.prisma.projectLabel.findFirst({
+            where: {
+                projectId,
+                name: { equals: name, mode: 'insensitive' },
+            },
+        });
+        if (existing) {
+            throw new common_1.BadRequestException('A label with this name already exists in the project');
+        }
+        const label = await this.prisma.projectLabel.create({
+            data: {
+                projectId,
+                name,
+                color: dto.color ?? '#6366f1',
+            },
+        });
+        await this.logActivity({
+            action: client_1.ActivityAction.CREATED,
+            entity: 'project_label',
+            entityId: label.id,
+            userId,
+            projectId,
+            metadata: {
+                labelName: label.name,
+                color: label.color,
+            },
+        });
+        return label;
+    }
+    async updateProjectLabel(projectId, labelId, dto, userId) {
+        await this.ensureProjectAdmin(projectId, userId);
+        const existingLabel = await this.prisma.projectLabel.findFirst({
+            where: { id: labelId, projectId },
+        });
+        if (!existingLabel) {
+            throw new common_1.NotFoundException('Project label not found');
+        }
+        const nextName = dto.name?.trim();
+        if (nextName && nextName.toLowerCase() !== existingLabel.name.toLowerCase()) {
+            const duplicate = await this.prisma.projectLabel.findFirst({
+                where: {
+                    projectId,
+                    name: { equals: nextName, mode: 'insensitive' },
+                    NOT: { id: labelId },
+                },
+            });
+            if (duplicate) {
+                throw new common_1.BadRequestException('A label with this name already exists in the project');
+            }
+        }
+        const updatedLabel = await this.prisma.projectLabel.update({
+            where: { id: labelId },
+            data: {
+                name: nextName,
+                color: dto.color,
+            },
+        });
+        await this.logActivity({
+            action: client_1.ActivityAction.UPDATED,
+            entity: 'project_label',
+            entityId: updatedLabel.id,
+            userId,
+            projectId,
+            metadata: {
+                labelName: updatedLabel.name,
+                color: updatedLabel.color,
+                previousName: existingLabel.name,
+                previousColor: existingLabel.color,
+                changedFields: Object.keys(dto),
+            },
+        });
+        return updatedLabel;
+    }
+    async deleteProjectLabel(projectId, labelId, userId) {
+        await this.ensureProjectAdmin(projectId, userId);
+        const label = await this.prisma.projectLabel.findFirst({
+            where: { id: labelId, projectId },
+        });
+        if (!label) {
+            throw new common_1.NotFoundException('Project label not found');
+        }
+        const deletedLabel = await this.prisma.projectLabel.delete({
+            where: { id: labelId },
+        });
+        await this.logActivity({
+            action: client_1.ActivityAction.DELETED,
+            entity: 'project_label',
+            entityId: deletedLabel.id,
+            userId,
+            projectId,
+            metadata: {
+                labelName: deletedLabel.name,
+                color: deletedLabel.color,
+            },
+        });
+        return deletedLabel;
     }
     async logActivity(params) {
         await this.prisma.activityLog.create({

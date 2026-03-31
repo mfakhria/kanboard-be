@@ -8,18 +8,18 @@ export declare class BoardController {
                 _count: {
                     comments: number;
                 };
-                assignee: {
-                    name: string;
-                    email: string;
-                    id: string;
-                    avatar: string | null;
-                } | null;
                 labels: {
                     name: string;
                     id: string;
                     taskId: string;
                     color: string;
                 }[];
+                assignee: {
+                    name: string;
+                    email: string;
+                    id: string;
+                    avatar: string | null;
+                } | null;
             } & {
                 id: string;
                 createdAt: Date;
@@ -56,18 +56,18 @@ export declare class BoardController {
                 _count: {
                     comments: number;
                 };
-                assignee: {
-                    name: string;
-                    email: string;
-                    id: string;
-                    avatar: string | null;
-                } | null;
                 labels: {
                     name: string;
                     id: string;
                     taskId: string;
                     color: string;
                 }[];
+                assignee: {
+                    name: string;
+                    email: string;
+                    id: string;
+                    avatar: string | null;
+                } | null;
             } & {
                 id: string;
                 createdAt: Date;

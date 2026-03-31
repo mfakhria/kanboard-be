@@ -64,6 +64,18 @@ let ProjectController = class ProjectController {
     async cancelInvitation(invitationId, userId) {
         return this.projectService.cancelInvitation(invitationId, userId);
     }
+    async getLabels(projectId, userId) {
+        return this.projectService.getProjectLabels(projectId, userId);
+    }
+    async createLabel(projectId, dto, userId) {
+        return this.projectService.createProjectLabel(projectId, dto, userId);
+    }
+    async updateLabel(projectId, labelId, dto, userId) {
+        return this.projectService.updateProjectLabel(projectId, labelId, dto, userId);
+    }
+    async deleteLabel(projectId, labelId, userId) {
+        return this.projectService.deleteProjectLabel(projectId, labelId, userId);
+    }
 };
 exports.ProjectController = ProjectController;
 __decorate([
@@ -182,6 +194,42 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], ProjectController.prototype, "cancelInvitation", null);
+__decorate([
+    (0, common_1.Get)(':id/labels'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], ProjectController.prototype, "getLabels", null);
+__decorate([
+    (0, common_1.Post)(':id/labels'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, dto_1.CreateProjectLabelDto, String]),
+    __metadata("design:returntype", Promise)
+], ProjectController.prototype, "createLabel", null);
+__decorate([
+    (0, common_1.Patch)(':id/labels/:labelId'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Param)('labelId')),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, dto_1.UpdateProjectLabelDto, String]),
+    __metadata("design:returntype", Promise)
+], ProjectController.prototype, "updateLabel", null);
+__decorate([
+    (0, common_1.Delete)(':id/labels/:labelId'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Param)('labelId')),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], ProjectController.prototype, "deleteLabel", null);
 exports.ProjectController = ProjectController = __decorate([
     (0, common_1.Controller)('projects'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

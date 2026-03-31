@@ -1,5 +1,5 @@
 import { ProjectService } from './project.service';
-import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, AcceptInvitationDto, UpdateMemberRoleDto } from './dto';
+import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, AcceptInvitationDto, UpdateMemberRoleDto, CreateProjectLabelDto, UpdateProjectLabelDto } from './dto';
 export declare class ProjectController {
     private readonly projectService;
     constructor(projectService: ProjectService);
@@ -27,6 +27,14 @@ export declare class ProjectController {
             updatedAt: Date;
             projectId: string;
         })[];
+        labels: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            projectId: string;
+            color: string;
+        }[];
     } & {
         name: string;
         id: string;
@@ -72,6 +80,14 @@ export declare class ProjectController {
             updatedAt: Date;
             projectId: string;
         })[];
+        labels: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            projectId: string;
+            color: string;
+        }[];
         name: string;
         id: string;
         createdAt: Date;
@@ -225,6 +241,14 @@ export declare class ProjectController {
             updatedAt: Date;
             projectId: string;
         })[];
+        labels: {
+            name: string;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            projectId: string;
+            color: string;
+        }[];
     } & {
         name: string;
         id: string;
@@ -357,5 +381,37 @@ export declare class ProjectController {
         inviterId: string;
         token: string;
         expiresAt: Date;
+    }>;
+    getLabels(projectId: string, userId: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        projectId: string;
+        color: string;
+    }[]>;
+    createLabel(projectId: string, dto: CreateProjectLabelDto, userId: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        projectId: string;
+        color: string;
+    }>;
+    updateLabel(projectId: string, labelId: string, dto: UpdateProjectLabelDto, userId: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        projectId: string;
+        color: string;
+    }>;
+    deleteLabel(projectId: string, labelId: string, userId: string): Promise<{
+        name: string;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        projectId: string;
+        color: string;
     }>;
 }
