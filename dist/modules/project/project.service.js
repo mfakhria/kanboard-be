@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProjectService = void 0;
 const common_1 = require("@nestjs/common");
+const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const crypto_1 = require("crypto");
 const notification_service_1 = require("../notification/notification.service");
@@ -85,6 +86,17 @@ let ProjectService = class ProjectService {
                 skipDuplicates: true,
             });
         }
+        await this.logActivity({
+            action: client_1.ActivityAction.CREATED,
+            entity: 'project',
+            entityId: project.id,
+            userId,
+            projectId: project.id,
+            metadata: {
+                projectName: project.name,
+                workspaceId: project.workspaceId,
+            },
+        });
         return project;
     }
     async findAllByWorkspace(workspaceId, userId) {
@@ -226,7 +238,7 @@ let ProjectService = class ProjectService {
         if (!isProjectAdmin && !isWsAdmin) {
             throw new common_1.ForbiddenException('You do not have permission to update this project');
         }
-        return this.prisma.project.update({
+        const updated = await this.prisma.project.update({
             where: { id: projectId },
             data: {
                 ...dto,
@@ -243,6 +255,18 @@ let ProjectService = class ProjectService {
                 },
             },
         });
+        await this.logActivity({
+            action: client_1.ActivityAction.UPDATED,
+            entity: 'project',
+            entityId: updated.id,
+            userId,
+            projectId: updated.id,
+            metadata: {
+                projectName: updated.name,
+                changedFields: Object.keys(dto),
+            },
+        });
+        return updated;
     }
     async delete(projectId, userId) {
         const project = await this.prisma.project.findUnique({
@@ -343,6 +367,18 @@ let ProjectService = class ProjectService {
                 role: invitation.role,
             });
         }
+        await this.logActivity({
+            action: client_1.ActivityAction.UPDATED,
+            entity: 'project_invitation',
+            entityId: invitation.id,
+            userId: inviterId,
+            projectId,
+            metadata: {
+                projectName: invitation.project.name,
+                invitedEmail: invitation.email,
+                role: invitation.role,
+            },
+        });
         return invitation;
     }
     async acceptInvitation(token, userId) {
@@ -383,7 +419,7 @@ let ProjectService = class ProjectService {
                     data: { userId, workspaceId: wsId, role: 'MEMBER' },
                 });
             }
-            return tx.projectMember.create({
+            const member = await tx.projectMember.create({
                 data: {
                     userId,
                     projectId: invitation.projectId,
@@ -394,6 +430,22 @@ let ProjectService = class ProjectService {
                     user: { select: { id: true, name: true, email: true, avatar: true } },
                 },
             });
+            await tx.activityLog.create({
+                data: {
+                    action: client_1.ActivityAction.UPDATED,
+                    entity: 'project_member',
+                    entityId: member.id,
+                    userId,
+                    projectId: invitation.projectId,
+                    metadata: {
+                        projectName: invitation.project.name,
+                        role: invitation.role,
+                        invitedEmail: invitation.email,
+                        status: 'ACCEPTED',
+                    },
+                },
+            });
+            return member;
         });
     }
     async declineInvitation(token, userId) {
@@ -464,7 +516,7 @@ let ProjectService = class ProjectService {
                 throw new common_1.ForbiddenException('Only project owners can change another owner\'s role');
             }
         }
-        return this.prisma.projectMember.update({
+        const updatedMember = await this.prisma.projectMember.update({
             where: { id: memberId },
             data: { role: dto.role },
             include: {
@@ -473,6 +525,19 @@ let ProjectService = class ProjectService {
                 },
             },
         });
+        await this.logActivity({
+            action: client_1.ActivityAction.UPDATED,
+            entity: 'project_member',
+            entityId: updatedMember.id,
+            userId,
+            projectId,
+            metadata: {
+                memberName: updatedMember.user.name,
+                memberEmail: updatedMember.user.email,
+                role: dto.role,
+            },
+        });
+        return updatedMember;
     }
     async removeMember(projectId, memberId, userId) {
         await this.ensureProjectAdmin(projectId, userId);
@@ -485,9 +550,21 @@ let ProjectService = class ProjectService {
         if (member.role === 'OWNER') {
             throw new common_1.ForbiddenException('Cannot remove the project owner');
         }
-        return this.prisma.projectMember.delete({
+        const removedMember = await this.prisma.projectMember.delete({
             where: { id: memberId },
         });
+        await this.logActivity({
+            action: client_1.ActivityAction.DELETED,
+            entity: 'project_member',
+            entityId: removedMember.id,
+            userId,
+            projectId,
+            metadata: {
+                removedUserId: removedMember.userId,
+                role: removedMember.role,
+            },
+        });
+        return removedMember;
     }
     async cancelInvitation(invitationId, userId) {
         const invitation = await this.prisma.projectInvitation.findUnique({
@@ -499,6 +576,18 @@ let ProjectService = class ProjectService {
         await this.ensureProjectAdmin(invitation.projectId, userId);
         return this.prisma.projectInvitation.delete({
             where: { id: invitationId },
+        });
+    }
+    async logActivity(params) {
+        await this.prisma.activityLog.create({
+            data: {
+                action: params.action,
+                entity: params.entity,
+                entityId: params.entityId,
+                userId: params.userId,
+                projectId: params.projectId,
+                metadata: params.metadata,
+            },
         });
     }
 };

@@ -8,6 +8,9 @@ describe('TaskService', () => {
       findUnique: jest.Mock
     }
   }
+  let notificationServiceMock: {
+    notifyTaskAssigned: jest.Mock
+  }
 
   beforeEach(() => {
     prismaMock = {
@@ -16,7 +19,11 @@ describe('TaskService', () => {
       },
     }
 
-    service = new TaskService(prismaMock as any)
+    notificationServiceMock = {
+      notifyTaskAssigned: jest.fn(),
+    }
+
+    service = new TaskService(prismaMock as any, notificationServiceMock as any)
   })
 
   it('should be defined', () => {

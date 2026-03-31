@@ -71,4 +71,26 @@ export declare class AnalyticsService {
             overdue: number;
         }[];
     }>;
+    getActivityLog(workspaceId: string, userId?: string): Promise<({
+        user: {
+            name: string;
+            id: string;
+            avatar: string | null;
+        };
+        project: {
+            name: string;
+            id: string;
+            color: string | null;
+            icon: string | null;
+        } | null;
+    } & {
+        id: string;
+        createdAt: Date;
+        userId: string;
+        metadata: import("@prisma/client/runtime/library").JsonValue | null;
+        projectId: string | null;
+        action: import(".prisma/client").$Enums.ActivityAction;
+        entity: string;
+        entityId: string;
+    })[]>;
 }

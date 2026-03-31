@@ -44,21 +44,26 @@ export class TaskController {
   async update(
     @Param('id') taskId: string,
     @Body() dto: UpdateTaskDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.taskService.update(taskId, dto);
+    return this.taskService.update(taskId, dto, userId);
   }
 
   @Delete(':id')
-  async delete(@Param('id') taskId: string) {
-    return this.taskService.delete(taskId);
+  async delete(
+    @Param('id') taskId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.delete(taskId, userId);
   }
 
   @Patch(':id/move')
   async move(
     @Param('id') taskId: string,
     @Body() dto: MoveTaskDto,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.taskService.move(taskId, dto);
+    return this.taskService.move(taskId, dto, userId);
   }
 
   @Patch(':id/assign')

@@ -336,4 +336,42 @@ export class AnalyticsService {
       weeklyTrend,
     };
   }
+
+  async getActivityLog(workspaceId: string, userId?: string) {
+    let projectFilter: any = { workspaceId };
+    if (userId) {
+      projectFilter = {
+        workspaceId,
+        OR: [
+          { members: { some: { userId } } },
+          { visibility: 'PUBLIC' },
+        ],
+      };
+    }
+
+    return this.prisma.activityLog.findMany({
+      where: {
+        project: projectFilter,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+          },
+        },
+        project: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    });
+  }
 }

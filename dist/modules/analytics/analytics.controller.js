@@ -33,6 +33,9 @@ let AnalyticsController = class AnalyticsController {
     async getOverviewStats(workspaceId, userId) {
         return this.analyticsService.getOverviewStats(workspaceId, userId);
     }
+    async getActivityLog(workspaceId, userId) {
+        return this.analyticsService.getActivityLog(workspaceId, userId);
+    }
 };
 exports.AnalyticsController = AnalyticsController;
 __decorate([
@@ -65,6 +68,14 @@ __decorate([
     __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], AnalyticsController.prototype, "getOverviewStats", null);
+__decorate([
+    (0, common_1.Get)('activity-log/:workspaceId'),
+    __param(0, (0, common_1.Param)('workspaceId')),
+    __param(1, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], AnalyticsController.prototype, "getActivityLog", null);
 exports.AnalyticsController = AnalyticsController = __decorate([
     (0, common_1.Controller)('analytics'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
+import { ActivityAction, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, UpdateMemberRoleDto } from './dto';
 import { randomUUID } from 'crypto';
@@ -89,6 +90,18 @@ export class ProjectService {
         skipDuplicates: true,
       });
     }
+
+    await this.logActivity({
+      action: ActivityAction.CREATED,
+      entity: 'project',
+      entityId: project.id,
+      userId,
+      projectId: project.id,
+      metadata: {
+        projectName: project.name,
+        workspaceId: project.workspaceId,
+      },
+    });
 
     return project;
   }
@@ -247,7 +260,7 @@ export class ProjectService {
       throw new ForbiddenException('You do not have permission to update this project');
     }
 
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id: projectId },
       data: {
         ...dto,
@@ -264,6 +277,20 @@ export class ProjectService {
         },
       },
     });
+
+    await this.logActivity({
+      action: ActivityAction.UPDATED,
+      entity: 'project',
+      entityId: updated.id,
+      userId,
+      projectId: updated.id,
+      metadata: {
+        projectName: updated.name,
+        changedFields: Object.keys(dto),
+      },
+    });
+
+    return updated;
   }
 
   async delete(projectId: string, userId: string) {
@@ -392,6 +419,19 @@ export class ProjectService {
       });
     }
 
+    await this.logActivity({
+      action: ActivityAction.UPDATED,
+      entity: 'project_invitation',
+      entityId: invitation.id,
+      userId: inviterId,
+      projectId,
+      metadata: {
+        projectName: invitation.project.name,
+        invitedEmail: invitation.email,
+        role: invitation.role,
+      },
+    });
+
     return invitation;
   }
 
@@ -444,7 +484,7 @@ export class ProjectService {
       }
 
       // Add as project member
-      return tx.projectMember.create({
+      const member = await tx.projectMember.create({
         data: {
           userId,
           projectId: invitation.projectId,
@@ -455,6 +495,24 @@ export class ProjectService {
           user: { select: { id: true, name: true, email: true, avatar: true } },
         },
       });
+
+      await tx.activityLog.create({
+        data: {
+          action: ActivityAction.UPDATED,
+          entity: 'project_member',
+          entityId: member.id,
+          userId,
+          projectId: invitation.projectId,
+          metadata: {
+            projectName: invitation.project.name,
+            role: invitation.role,
+            invitedEmail: invitation.email,
+            status: 'ACCEPTED',
+          },
+        },
+      });
+
+      return member;
     });
   }
 
@@ -543,7 +601,7 @@ export class ProjectService {
       }
     }
 
-    return this.prisma.projectMember.update({
+    const updatedMember = await this.prisma.projectMember.update({
       where: { id: memberId },
       data: { role: dto.role },
       include: {
@@ -552,6 +610,21 @@ export class ProjectService {
         },
       },
     });
+
+    await this.logActivity({
+      action: ActivityAction.UPDATED,
+      entity: 'project_member',
+      entityId: updatedMember.id,
+      userId,
+      projectId,
+      metadata: {
+        memberName: updatedMember.user.name,
+        memberEmail: updatedMember.user.email,
+        role: dto.role,
+      },
+    });
+
+    return updatedMember;
   }
 
   async removeMember(projectId: string, memberId: string, userId: string) {
@@ -570,9 +643,23 @@ export class ProjectService {
       throw new ForbiddenException('Cannot remove the project owner');
     }
 
-    return this.prisma.projectMember.delete({
+    const removedMember = await this.prisma.projectMember.delete({
       where: { id: memberId },
     });
+
+    await this.logActivity({
+      action: ActivityAction.DELETED,
+      entity: 'project_member',
+      entityId: removedMember.id,
+      userId,
+      projectId,
+      metadata: {
+        removedUserId: removedMember.userId,
+        role: removedMember.role,
+      },
+    });
+
+    return removedMember;
   }
 
   async cancelInvitation(invitationId: string, userId: string) {
@@ -588,6 +675,26 @@ export class ProjectService {
 
     return this.prisma.projectInvitation.delete({
       where: { id: invitationId },
+    });
+  }
+
+  private async logActivity(params: {
+    action: ActivityAction;
+    entity: string;
+    entityId: string;
+    userId: string;
+    projectId?: string;
+    metadata?: Record<string, unknown>;
+  }) {
+    await this.prisma.activityLog.create({
+      data: {
+        action: params.action,
+        entity: params.entity,
+        entityId: params.entityId,
+        userId: params.userId,
+        projectId: params.projectId,
+        metadata: params.metadata as Prisma.InputJsonValue | undefined,
+      },
     });
   }
 }

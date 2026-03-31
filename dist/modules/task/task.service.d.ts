@@ -143,7 +143,7 @@ export declare class TaskService {
         assigneeId: string | null;
         creatorId: string;
     }>;
-    update(taskId: string, dto: UpdateTaskDto): Promise<{
+    update(taskId: string, dto: UpdateTaskDto, userId: string): Promise<{
         _count: {
             comments: number;
         };
@@ -173,7 +173,7 @@ export declare class TaskService {
         assigneeId: string | null;
         creatorId: string;
     }>;
-    delete(taskId: string): Promise<{
+    delete(taskId: string, userId: string): Promise<{
         id: string;
         createdAt: Date;
         updatedAt: Date;
@@ -187,7 +187,7 @@ export declare class TaskService {
         assigneeId: string | null;
         creatorId: string;
     }>;
-    move(taskId: string, dto: MoveTaskDto): Promise<{
+    move(taskId: string, dto: MoveTaskDto, userId: string): Promise<{
         _count: {
             comments: number;
         };
@@ -253,4 +253,5 @@ export declare class TaskService {
         content: string;
         authorId: string;
     }>;
+    private logActivity;
 }

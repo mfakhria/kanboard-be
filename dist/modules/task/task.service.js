@@ -10,6 +10,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TaskService = void 0;
+const client_1 = require("@prisma/client");
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const notification_service_1 = require("../notification/notification.service");
@@ -56,6 +57,18 @@ let TaskService = class TaskService {
         });
     }
     async create(dto, creatorId) {
+        const columnContext = await this.prisma.column.findUnique({
+            where: { id: dto.columnId },
+            include: {
+                board: {
+                    include: {
+                        project: {
+                            select: { id: true, name: true },
+                        },
+                    },
+                },
+            },
+        });
         const maxPosition = await this.prisma.task.aggregate({
             where: { columnId: dto.columnId },
             _max: { position: true },
@@ -101,6 +114,20 @@ let TaskService = class TaskService {
                 actorId: creatorId,
                 taskId: task.id,
                 taskTitle: task.title,
+            });
+        }
+        if (columnContext) {
+            await this.logActivity({
+                action: client_1.ActivityAction.CREATED,
+                entity: 'task',
+                entityId: task.id,
+                userId: creatorId,
+                projectId: columnContext.board.project.id,
+                metadata: {
+                    taskTitle: task.title,
+                    columnName: columnContext.name,
+                    projectName: columnContext.board.project.name,
+                },
             });
         }
         return task;
@@ -159,14 +186,30 @@ let TaskService = class TaskService {
         }
         return task;
     }
-    async update(taskId, dto) {
+    async update(taskId, dto, userId) {
         const task = await this.prisma.task.findUnique({
             where: { id: taskId },
+            include: {
+                column: {
+                    include: {
+                        board: {
+                            include: {
+                                project: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         });
         if (!task) {
             throw new common_1.NotFoundException('Task not found');
         }
-        return this.prisma.task.update({
+        const updatedTask = await this.prisma.task.update({
             where: { id: taskId },
             data: {
                 ...dto,
@@ -187,26 +230,71 @@ let TaskService = class TaskService {
                 },
             },
         });
+        await this.logActivity({
+            action: dto.completed && !task.completed ? client_1.ActivityAction.COMPLETED : client_1.ActivityAction.UPDATED,
+            entity: 'task',
+            entityId: updatedTask.id,
+            userId,
+            projectId: task.column.board.project.id,
+            metadata: {
+                taskTitle: updatedTask.title,
+                projectName: task.column.board.project.name,
+                changedFields: Object.keys(dto),
+            },
+        });
+        return updatedTask;
     }
-    async delete(taskId) {
+    async delete(taskId, userId) {
+        const task = await this.prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                column: {
+                    include: {
+                        board: {
+                            include: {
+                                project: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!task) {
+            throw new common_1.NotFoundException('Task not found');
+        }
+        const deletedTask = await this.prisma.task.delete({
+            where: { id: taskId },
+        });
+        await this.logActivity({
+            action: client_1.ActivityAction.DELETED,
+            entity: 'task',
+            entityId: deletedTask.id,
+            userId,
+            projectId: task.column.board.project.id,
+            metadata: {
+                taskTitle: deletedTask.title,
+                projectName: task.column.board.project.name,
+            },
+        });
+        return deletedTask;
+    }
+    async move(taskId, dto, userId) {
         const task = await this.prisma.task.findUnique({
             where: { id: taskId },
         });
         if (!task) {
             throw new common_1.NotFoundException('Task not found');
         }
-        return this.prisma.task.delete({
-            where: { id: taskId },
+        const targetColumn = await this.prisma.column.findUnique({
+            where: { id: dto.columnId },
+            select: { id: true, name: true },
         });
-    }
-    async move(taskId, dto) {
-        const task = await this.prisma.task.findUnique({
-            where: { id: taskId },
-        });
-        if (!task) {
-            throw new common_1.NotFoundException('Task not found');
-        }
-        return this.prisma.$transaction(async (tx) => {
+        const movedTask = await this.prisma.$transaction(async (tx) => {
             if (task.columnId !== dto.columnId) {
                 await tx.task.updateMany({
                     where: {
@@ -273,6 +361,44 @@ let TaskService = class TaskService {
                 },
             });
         });
+        const taskContext = await this.prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                column: {
+                    include: {
+                        board: {
+                            include: {
+                                project: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (taskContext) {
+            await this.logActivity({
+                action: client_1.ActivityAction.MOVED,
+                entity: 'task',
+                entityId: movedTask.id,
+                userId,
+                projectId: taskContext.column.board.project.id,
+                metadata: {
+                    taskTitle: movedTask.title,
+                    fromColumnId: task.columnId,
+                    fromPosition: task.position,
+                    toColumnId: dto.columnId,
+                    toPosition: dto.position,
+                    toColumnName: targetColumn?.name,
+                    projectName: taskContext.column.board.project.name,
+                },
+            });
+        }
+        return movedTask;
     }
     async assignMember(taskId, assigneeId, actorId) {
         const task = await this.prisma.task.findUnique({
@@ -321,16 +447,45 @@ let TaskService = class TaskService {
                 projectName: task.column.board.project.name,
             });
         }
+        await this.logActivity({
+            action: client_1.ActivityAction.ASSIGNED,
+            entity: 'task',
+            entityId: updated.id,
+            userId: actorId,
+            projectId: task.column.board.project.id,
+            metadata: {
+                taskTitle: updated.title,
+                assigneeName: updated.assignee?.name ?? null,
+                assigneeId,
+                projectName: task.column.board.project.name,
+            },
+        });
         return updated;
     }
     async addComment(taskId, content, authorId) {
         const task = await this.prisma.task.findUnique({
             where: { id: taskId },
+            include: {
+                column: {
+                    include: {
+                        board: {
+                            include: {
+                                project: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         });
         if (!task) {
             throw new common_1.NotFoundException('Task not found');
         }
-        return this.prisma.comment.create({
+        const comment = await this.prisma.comment.create({
             data: {
                 content,
                 taskId,
@@ -345,6 +500,31 @@ let TaskService = class TaskService {
                         avatar: true,
                     },
                 },
+            },
+        });
+        await this.logActivity({
+            action: client_1.ActivityAction.COMMENTED,
+            entity: 'comment',
+            entityId: comment.id,
+            userId: authorId,
+            projectId: task.column.board.project.id,
+            metadata: {
+                taskTitle: task.title,
+                projectName: task.column.board.project.name,
+                commentPreview: content.slice(0, 120),
+            },
+        });
+        return comment;
+    }
+    async logActivity(params) {
+        await this.prisma.activityLog.create({
+            data: {
+                action: params.action,
+                entity: params.entity,
+                entityId: params.entityId,
+                userId: params.userId,
+                projectId: params.projectId ?? undefined,
+                metadata: params.metadata,
             },
         });
     }

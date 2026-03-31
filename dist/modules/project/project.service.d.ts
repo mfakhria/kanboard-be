@@ -362,4 +362,5 @@ export declare class ProjectService {
         token: string;
         expiresAt: Date;
     }>;
+    private logActivity;
 }

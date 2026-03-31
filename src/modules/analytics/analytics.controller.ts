@@ -33,4 +33,12 @@ export class AnalyticsController {
   ) {
     return this.analyticsService.getOverviewStats(workspaceId, userId);
   }
+
+  @Get('activity-log/:workspaceId')
+  async getActivityLog(
+    @Param('workspaceId') workspaceId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.analyticsService.getActivityLog(workspaceId, userId);
+  }
 }

@@ -31,14 +31,14 @@ let TaskController = class TaskController {
     async findOne(taskId) {
         return this.taskService.findById(taskId);
     }
-    async update(taskId, dto) {
-        return this.taskService.update(taskId, dto);
+    async update(taskId, dto, userId) {
+        return this.taskService.update(taskId, dto, userId);
     }
-    async delete(taskId) {
-        return this.taskService.delete(taskId);
+    async delete(taskId, userId) {
+        return this.taskService.delete(taskId, userId);
     }
-    async move(taskId, dto) {
-        return this.taskService.move(taskId, dto);
+    async move(taskId, dto, userId) {
+        return this.taskService.move(taskId, dto, userId);
     }
     async assign(taskId, assigneeId, userId) {
         return this.taskService.assignMember(taskId, assigneeId, userId);
@@ -75,23 +75,26 @@ __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, dto_1.UpdateTaskDto]),
+    __metadata("design:paramtypes", [String, dto_1.UpdateTaskDto, String]),
     __metadata("design:returntype", Promise)
 ], TaskController.prototype, "update", null);
 __decorate([
     (0, common_1.Delete)(':id'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, decorators_1.CurrentUser)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String]),
     __metadata("design:returntype", Promise)
 ], TaskController.prototype, "delete", null);
 __decorate([
     (0, common_1.Patch)(':id/move'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, dto_1.MoveTaskDto]),
+    __metadata("design:paramtypes", [String, dto_1.MoveTaskDto, String]),
     __metadata("design:returntype", Promise)
 ], TaskController.prototype, "move", null);
 __decorate([
