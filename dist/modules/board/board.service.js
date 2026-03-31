@@ -34,7 +34,7 @@ let BoardService = class BoardService {
                                 },
                                 labels: true,
                                 _count: {
-                                    select: { comments: true },
+                                    select: { comments: true, attachments: true },
                                 },
                             },
                             orderBy: { position: 'asc' },
@@ -63,7 +63,7 @@ let BoardService = class BoardService {
                                 },
                                 labels: true,
                                 _count: {
-                                    select: { comments: true },
+                                    select: { comments: true, attachments: true },
                                 },
                             },
                             orderBy: { position: 'asc' },

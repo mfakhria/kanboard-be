@@ -14,6 +14,8 @@ const client_1 = require("@prisma/client");
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const notification_service_1 = require("../notification/notification.service");
+const path_1 = require("path");
+const fs_1 = require("fs");
 let TaskService = class TaskService {
     constructor(prisma, notificationService) {
         this.prisma = prisma;
@@ -42,6 +44,7 @@ let TaskService = class TaskService {
                     select: { id: true, name: true, email: true, avatar: true },
                 },
                 labels: true,
+                _count: { select: { comments: true, attachments: true } },
                 column: {
                     select: {
                         id: true,
@@ -51,7 +54,6 @@ let TaskService = class TaskService {
                         },
                     },
                 },
-                _count: { select: { comments: true } },
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -109,7 +111,7 @@ let TaskService = class TaskService {
                 },
                 labels: true,
                 _count: {
-                    select: { comments: true },
+                    select: { comments: true, attachments: true },
                 },
             },
         });
@@ -158,6 +160,19 @@ let TaskService = class TaskService {
                     },
                 },
                 labels: true,
+                attachments: {
+                    include: {
+                        uploader: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                avatar: true,
+                            },
+                        },
+                    },
+                    orderBy: { createdAt: 'desc' },
+                },
                 comments: {
                     include: {
                         author: {
@@ -241,7 +256,7 @@ let TaskService = class TaskService {
                 },
                 labels: true,
                 _count: {
-                    select: { comments: true },
+                    select: { comments: true, attachments: true },
                 },
             },
         });
@@ -379,7 +394,7 @@ let TaskService = class TaskService {
                     },
                     labels: true,
                     _count: {
-                        select: { comments: true },
+                        select: { comments: true, attachments: true },
                     },
                 },
             });
@@ -458,6 +473,10 @@ let TaskService = class TaskService {
                         email: true,
                         avatar: true,
                     },
+                },
+                labels: true,
+                _count: {
+                    select: { comments: true, attachments: true },
                 },
             },
         });
@@ -539,6 +558,116 @@ let TaskService = class TaskService {
             },
         });
         return comment;
+    }
+    async addAttachment(taskId, file, userId) {
+        const task = await this.prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                column: {
+                    include: {
+                        board: {
+                            include: {
+                                project: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!task) {
+            throw new common_1.NotFoundException('Task not found');
+        }
+        const attachment = await this.prisma.taskAttachment.create({
+            data: {
+                taskId,
+                uploaderId: userId,
+                fileName: file.filename,
+                originalName: file.originalname,
+                mimeType: file.mimetype,
+                size: file.size,
+                url: `/uploads/task-attachments/${file.filename}`,
+            },
+            include: {
+                uploader: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        avatar: true,
+                    },
+                },
+            },
+        });
+        await this.logActivity({
+            action: client_1.ActivityAction.UPDATED,
+            entity: 'task_attachment',
+            entityId: attachment.id,
+            userId,
+            projectId: task.column.board.project.id,
+            metadata: {
+                taskTitle: task.title,
+                projectName: task.column.board.project.name,
+                fileName: attachment.originalName,
+                changedFields: ['attachments'],
+            },
+        });
+        return attachment;
+    }
+    async deleteAttachment(taskId, attachmentId, userId) {
+        const attachment = await this.prisma.taskAttachment.findFirst({
+            where: {
+                id: attachmentId,
+                taskId,
+            },
+            include: {
+                task: {
+                    include: {
+                        column: {
+                            include: {
+                                board: {
+                                    include: {
+                                        project: {
+                                            select: {
+                                                id: true,
+                                                name: true,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!attachment) {
+            throw new common_1.NotFoundException('Attachment not found');
+        }
+        const deletedAttachment = await this.prisma.taskAttachment.delete({
+            where: { id: attachmentId },
+        });
+        const filePath = (0, path_1.join)(process.cwd(), 'uploads', 'task-attachments', deletedAttachment.fileName);
+        if ((0, fs_1.existsSync)(filePath)) {
+            (0, fs_1.unlinkSync)(filePath);
+        }
+        await this.logActivity({
+            action: client_1.ActivityAction.DELETED,
+            entity: 'task_attachment',
+            entityId: deletedAttachment.id,
+            userId,
+            projectId: attachment.task.column.board.project.id,
+            metadata: {
+                taskTitle: attachment.task.title,
+                projectName: attachment.task.column.board.project.name,
+                fileName: deletedAttachment.originalName,
+            },
+        });
+        return deletedAttachment;
     }
     async logActivity(params) {
         await this.prisma.activityLog.create({

@@ -3,6 +3,7 @@ import { CreateTaskDto, UpdateTaskDto, MoveTaskDto } from './dto';
 export declare class TaskController {
     private readonly taskService;
     constructor(taskService: TaskService);
+    private static getUploadDestination;
     findAll(workspaceId: string, userId: string): Promise<({
         column: {
             board: {
@@ -15,6 +16,7 @@ export declare class TaskController {
         };
         _count: {
             comments: number;
+            attachments: number;
         };
         labels: {
             name: string;
@@ -51,6 +53,7 @@ export declare class TaskController {
     create(dto: CreateTaskDto, userId: string): Promise<{
         _count: {
             comments: number;
+            attachments: number;
         };
         labels: {
             name: string;
@@ -127,6 +130,24 @@ export declare class TaskController {
             id: string;
             avatar: string | null;
         };
+        attachments: ({
+            uploader: {
+                name: string;
+                email: string;
+                id: string;
+                avatar: string | null;
+            };
+        } & {
+            id: string;
+            createdAt: Date;
+            taskId: string;
+            fileName: string;
+            originalName: string;
+            mimeType: string;
+            size: number;
+            url: string;
+            uploaderId: string;
+        })[];
     } & {
         id: string;
         createdAt: Date;
@@ -144,6 +165,7 @@ export declare class TaskController {
     update(taskId: string, dto: UpdateTaskDto, userId: string): Promise<{
         _count: {
             comments: number;
+            attachments: number;
         };
         labels: {
             name: string;
@@ -188,6 +210,7 @@ export declare class TaskController {
     move(taskId: string, dto: MoveTaskDto, userId: string): Promise<{
         _count: {
             comments: number;
+            attachments: number;
         };
         labels: {
             name: string;
@@ -216,6 +239,16 @@ export declare class TaskController {
         creatorId: string;
     }>;
     assign(taskId: string, assigneeId: string | null, userId: string): Promise<{
+        _count: {
+            comments: number;
+            attachments: number;
+        };
+        labels: {
+            name: string;
+            id: string;
+            taskId: string;
+            color: string;
+        }[];
         assignee: {
             name: string;
             email: string;
@@ -250,5 +283,34 @@ export declare class TaskController {
         taskId: string;
         content: string;
         authorId: string;
+    }>;
+    uploadAttachment(taskId: string, file: any, userId: string): Promise<{
+        uploader: {
+            name: string;
+            email: string;
+            id: string;
+            avatar: string | null;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        taskId: string;
+        fileName: string;
+        originalName: string;
+        mimeType: string;
+        size: number;
+        url: string;
+        uploaderId: string;
+    }>;
+    deleteAttachment(taskId: string, attachmentId: string, userId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        taskId: string;
+        fileName: string;
+        originalName: string;
+        mimeType: string;
+        size: number;
+        url: string;
+        uploaderId: string;
     }>;
 }

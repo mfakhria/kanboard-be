@@ -1,6 +1,9 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
+import * as express from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters';
 import { TransformInterceptor } from './common/interceptors';
@@ -9,9 +12,15 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
+  const uploadsPath = join(process.cwd(), 'uploads');
+
+  if (!existsSync(uploadsPath)) {
+    mkdirSync(uploadsPath, { recursive: true });
+  }
 
   // Global prefix
   app.setGlobalPrefix('api');
+  app.use('/uploads', express.static(uploadsPath));
 
   // CORS — supports comma-separated origins (e.g. "http://localhost:3000,https://kanboard.vercel.app")
   const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:3000');

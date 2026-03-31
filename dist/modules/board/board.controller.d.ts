@@ -7,6 +7,7 @@ export declare class BoardController {
             tasks: ({
                 _count: {
                     comments: number;
+                    attachments: number;
                 };
                 labels: {
                     name: string;
@@ -55,6 +56,7 @@ export declare class BoardController {
             tasks: ({
                 _count: {
                     comments: number;
+                    attachments: number;
                 };
                 labels: {
                     name: string;

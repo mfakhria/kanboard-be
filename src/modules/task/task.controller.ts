@@ -8,7 +8,15 @@ import {
   Body,
   Query,
   UseGuards,
+  UploadedFile,
+  UseInterceptors,
+  ParseFilePipeBuilder,
+  HttpStatus,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { TaskService } from './task.service';
 import { CreateTaskDto, UpdateTaskDto, MoveTaskDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -18,6 +26,14 @@ import { CurrentUser } from '../../common/decorators';
 @UseGuards(JwtAuthGuard)
 export class TaskController {
   constructor(private readonly taskService: TaskService) {}
+
+  private static getUploadDestination() {
+    const destination = join(process.cwd(), 'uploads', 'task-attachments');
+    if (!existsSync(destination)) {
+      mkdirSync(destination, { recursive: true });
+    }
+    return destination;
+  }
 
   @Get()
   async findAll(
@@ -82,5 +98,44 @@ export class TaskController {
     @CurrentUser('id') userId: string,
   ) {
     return this.taskService.addComment(taskId, content, userId);
+  }
+
+  @Post(':id/attachments')
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: TaskController.getUploadDestination(),
+      filename: (_: any, file: any, callback: any) => {
+        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+        callback(null, `${uniqueSuffix}${extname(file.originalname)}`);
+      },
+    }),
+    limits: { fileSize: 10 * 1024 * 1024 },
+  }))
+  async uploadAttachment(
+    @Param('id') taskId: string,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: /(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)$/i,
+        })
+        .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 })
+        .build({
+          fileIsRequired: true,
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    file: any,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.addAttachment(taskId, file, userId);
+  }
+
+  @Delete(':id/attachments/:attachmentId')
+  async deleteAttachment(
+    @Param('id') taskId: string,
+    @Param('attachmentId') attachmentId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.taskService.deleteAttachment(taskId, attachmentId, userId);
   }
 }

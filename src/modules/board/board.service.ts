@@ -23,7 +23,7 @@ export class BoardService {
                 },
                 labels: true,
                 _count: {
-                  select: { comments: true },
+                  select: { comments: true, attachments: true },
                 },
               },
               orderBy: { position: 'asc' },
@@ -53,7 +53,7 @@ export class BoardService {
                 },
                 labels: true,
                 _count: {
-                  select: { comments: true },
+                  select: { comments: true, attachments: true },
                 },
               },
               orderBy: { position: 'asc' },

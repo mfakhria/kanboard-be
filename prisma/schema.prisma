@@ -29,6 +29,7 @@ model User {
   projectMembers   ProjectMember[]
   projectInvitations ProjectInvitation[]
   comments         Comment[]
+  uploadedAttachments TaskAttachment[]
   activityLogs     ActivityLog[]
   notifications    Notification[]         @relation("NotificationUser")
   actedNotifications Notification[]       @relation("NotificationActor")
@@ -280,6 +281,7 @@ model Task {
   // Relations
   comments Comment[]
   labels   TaskLabel[]
+  attachments TaskAttachment[]
 
   @@index([columnId])
   @@index([columnId, position])
@@ -334,6 +336,26 @@ model Comment {
   @@index([taskId])
   @@index([authorId])
   @@map("comments")
+}
+
+model TaskAttachment {
+  id           String   @id @default(uuid())
+  fileName     String   @map("file_name")
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  size         Int
+  url          String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  taskId       String   @map("task_id")
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  uploaderId   String   @map("uploader_id")
+  uploader     User     @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([uploaderId])
+  @@map("task_attachments")
 }
 
 // ─── Activity Log ────────────────────────────────────────────────────────────

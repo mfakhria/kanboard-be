@@ -14,6 +14,10 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TaskController = void 0;
 const common_1 = require("@nestjs/common");
+const platform_express_1 = require("@nestjs/platform-express");
+const multer_1 = require("multer");
+const path_1 = require("path");
+const fs_1 = require("fs");
 const task_service_1 = require("./task.service");
 const dto_1 = require("./dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
@@ -21,6 +25,13 @@ const decorators_1 = require("../../common/decorators");
 let TaskController = class TaskController {
     constructor(taskService) {
         this.taskService = taskService;
+    }
+    static getUploadDestination() {
+        const destination = (0, path_1.join)(process.cwd(), 'uploads', 'task-attachments');
+        if (!(0, fs_1.existsSync)(destination)) {
+            (0, fs_1.mkdirSync)(destination, { recursive: true });
+        }
+        return destination;
     }
     async findAll(workspaceId, userId) {
         return this.taskService.findAllByWorkspace(workspaceId, userId);
@@ -45,6 +56,12 @@ let TaskController = class TaskController {
     }
     async addComment(taskId, content, userId) {
         return this.taskService.addComment(taskId, content, userId);
+    }
+    async uploadAttachment(taskId, file, userId) {
+        return this.taskService.addAttachment(taskId, file, userId);
+    }
+    async deleteAttachment(taskId, attachmentId, userId) {
+        return this.taskService.deleteAttachment(taskId, attachmentId, userId);
     }
 };
 exports.TaskController = TaskController;
@@ -115,6 +132,42 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", Promise)
 ], TaskController.prototype, "addComment", null);
+__decorate([
+    (0, common_1.Post)(':id/attachments'),
+    (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
+        storage: (0, multer_1.diskStorage)({
+            destination: TaskController.getUploadDestination(),
+            filename: (_, file, callback) => {
+                const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+                callback(null, `${uniqueSuffix}${(0, path_1.extname)(file.originalname)}`);
+            },
+        }),
+        limits: { fileSize: 10 * 1024 * 1024 },
+    })),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.UploadedFile)(new common_1.ParseFilePipeBuilder()
+        .addFileTypeValidator({
+        fileType: /(jpg|jpeg|png|gif|webp|pdf|doc|docx|xls|xlsx|ppt|pptx|txt|csv|zip)$/i,
+    })
+        .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 })
+        .build({
+        fileIsRequired: true,
+        errorHttpStatusCode: common_1.HttpStatus.UNPROCESSABLE_ENTITY,
+    }))),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object, String]),
+    __metadata("design:returntype", Promise)
+], TaskController.prototype, "uploadAttachment", null);
+__decorate([
+    (0, common_1.Delete)(':id/attachments/:attachmentId'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Param)('attachmentId')),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], TaskController.prototype, "deleteAttachment", null);
 exports.TaskController = TaskController = __decorate([
     (0, common_1.Controller)('tasks'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
