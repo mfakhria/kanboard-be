@@ -13,9 +13,11 @@ exports.ProjectService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const crypto_1 = require("crypto");
+const notification_service_1 = require("../notification/notification.service");
 let ProjectService = class ProjectService {
-    constructor(prisma) {
+    constructor(prisma, notificationService) {
         this.prisma = prisma;
+        this.notificationService = notificationService;
     }
     async create(dto, userId) {
         await this.ensureWorkspaceMember(dto.workspaceId, userId);
@@ -316,7 +318,7 @@ let ProjectService = class ProjectService {
         }
         const token = (0, crypto_1.randomUUID)();
         const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-        return this.prisma.projectInvitation.create({
+        const invitation = await this.prisma.projectInvitation.create({
             data: {
                 email: dto.email,
                 token,
@@ -330,6 +332,18 @@ let ProjectService = class ProjectService {
                 inviter: { select: { id: true, name: true, email: true } },
             },
         });
+        if (existingUser) {
+            await this.notificationService.notifyProjectInvitation({
+                userId: existingUser.id,
+                actorId: inviterId,
+                projectId,
+                projectName: invitation.project.name,
+                invitationId: invitation.id,
+                token,
+                role: invitation.role,
+            });
+        }
+        return invitation;
     }
     async acceptInvitation(token, userId) {
         const invitation = await this.prisma.projectInvitation.findUnique({
@@ -491,6 +505,7 @@ let ProjectService = class ProjectService {
 exports.ProjectService = ProjectService;
 exports.ProjectService = ProjectService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        notification_service_1.NotificationService])
 ], ProjectService);
 //# sourceMappingURL=project.service.js.map

@@ -7,10 +7,14 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProjectDto, UpdateProjectDto, InviteToProjectDto, UpdateMemberRoleDto } from './dto';
 import { randomUUID } from 'crypto';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class ProjectService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   async create(dto: CreateProjectDto, userId: string) {
     // Verify user is a member of the workspace
@@ -361,7 +365,7 @@ export class ProjectService {
     const token = randomUUID();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
-    return this.prisma.projectInvitation.create({
+    const invitation = await this.prisma.projectInvitation.create({
       data: {
         email: dto.email,
         token,
@@ -375,6 +379,20 @@ export class ProjectService {
         inviter: { select: { id: true, name: true, email: true } },
       },
     });
+
+    if (existingUser) {
+      await this.notificationService.notifyProjectInvitation({
+        userId: existingUser.id,
+        actorId: inviterId,
+        projectId,
+        projectName: invitation.project.name,
+        invitationId: invitation.id,
+        token,
+        role: invitation.role,
+      });
+    }
+
+    return invitation;
   }
 
   async acceptInvitation(token: string, userId: string) {

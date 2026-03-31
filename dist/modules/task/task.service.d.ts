@@ -1,8 +1,10 @@
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTaskDto, UpdateTaskDto, MoveTaskDto } from './dto';
+import { NotificationService } from '../notification/notification.service';
 export declare class TaskService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly notificationService;
+    constructor(prisma: PrismaService, notificationService: NotificationService);
     findAllByWorkspace(workspaceId: string, userId: string): Promise<({
         column: {
             board: {
@@ -31,17 +33,17 @@ export declare class TaskService {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -67,17 +69,17 @@ export declare class TaskService {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -124,17 +126,17 @@ export declare class TaskService {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -154,17 +156,17 @@ export declare class TaskService {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -176,9 +178,9 @@ export declare class TaskService {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -198,24 +200,24 @@ export declare class TaskService {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
         assigneeId: string | null;
         creatorId: string;
     }>;
-    assignMember(taskId: string, assigneeId: string | null): Promise<{
+    assignMember(taskId: string, assigneeId: string | null, actorId: string): Promise<{
         assignee: {
             name: string;
             email: string;
@@ -227,9 +229,9 @@ export declare class TaskService {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;

@@ -12,9 +12,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TaskService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
+const notification_service_1 = require("../notification/notification.service");
 let TaskService = class TaskService {
-    constructor(prisma) {
+    constructor(prisma, notificationService) {
         this.prisma = prisma;
+        this.notificationService = notificationService;
     }
     async findAllByWorkspace(workspaceId, userId) {
         return this.prisma.task.findMany({
@@ -59,7 +61,7 @@ let TaskService = class TaskService {
             _max: { position: true },
         });
         const position = dto.position ?? (maxPosition._max.position ?? -1) + 1;
-        return this.prisma.task.create({
+        const task = await this.prisma.task.create({
             data: {
                 title: dto.title,
                 description: dto.description,
@@ -93,6 +95,15 @@ let TaskService = class TaskService {
                 },
             },
         });
+        if (task.assignee && task.assignee.id !== creatorId) {
+            await this.notificationService.notifyTaskAssigned({
+                userId: task.assignee.id,
+                actorId: creatorId,
+                taskId: task.id,
+                taskTitle: task.title,
+            });
+        }
+        return task;
     }
     async findById(taskId) {
         const task = await this.prisma.task.findUnique({
@@ -263,14 +274,30 @@ let TaskService = class TaskService {
             });
         });
     }
-    async assignMember(taskId, assigneeId) {
+    async assignMember(taskId, assigneeId, actorId) {
         const task = await this.prisma.task.findUnique({
             where: { id: taskId },
+            include: {
+                column: {
+                    include: {
+                        board: {
+                            include: {
+                                project: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
         });
         if (!task) {
             throw new common_1.NotFoundException('Task not found');
         }
-        return this.prisma.task.update({
+        const updated = await this.prisma.task.update({
             where: { id: taskId },
             data: { assigneeId },
             include: {
@@ -284,6 +311,17 @@ let TaskService = class TaskService {
                 },
             },
         });
+        if (updated.assignee && updated.assignee.id !== actorId) {
+            await this.notificationService.notifyTaskAssigned({
+                userId: updated.assignee.id,
+                actorId,
+                taskId: updated.id,
+                taskTitle: updated.title,
+                projectId: task.column.board.project.id,
+                projectName: task.column.board.project.name,
+            });
+        }
+        return updated;
     }
     async addComment(taskId, content, authorId) {
         const task = await this.prisma.task.findUnique({
@@ -314,6 +352,7 @@ let TaskService = class TaskService {
 exports.TaskService = TaskService;
 exports.TaskService = TaskService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        notification_service_1.NotificationService])
 ], TaskService);
 //# sourceMappingURL=task.service.js.map

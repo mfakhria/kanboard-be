@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateTaskDto, UpdateTaskDto, MoveTaskDto } from './dto';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class TaskService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   async findAllByWorkspace(workspaceId: string, userId: string) {
     return this.prisma.task.findMany({
@@ -53,7 +57,7 @@ export class TaskService {
 
     const position = dto.position ?? (maxPosition._max.position ?? -1) + 1;
 
-    return this.prisma.task.create({
+    const task = await this.prisma.task.create({
       data: {
         title: dto.title,
         description: dto.description,
@@ -87,6 +91,17 @@ export class TaskService {
         },
       },
     });
+
+    if (task.assignee && task.assignee.id !== creatorId) {
+      await this.notificationService.notifyTaskAssigned({
+        userId: task.assignee.id,
+        actorId: creatorId,
+        taskId: task.id,
+        taskTitle: task.title,
+      });
+    }
+
+    return task;
   }
 
   async findById(taskId: string) {
@@ -278,16 +293,32 @@ export class TaskService {
     });
   }
 
-  async assignMember(taskId: string, assigneeId: string | null) {
+  async assignMember(taskId: string, assigneeId: string | null, actorId: string) {
     const task = await this.prisma.task.findUnique({
       where: { id: taskId },
+      include: {
+        column: {
+          include: {
+            board: {
+              include: {
+                project: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!task) {
       throw new NotFoundException('Task not found');
     }
 
-    return this.prisma.task.update({
+    const updated = await this.prisma.task.update({
       where: { id: taskId },
       data: { assigneeId },
       include: {
@@ -301,6 +332,19 @@ export class TaskService {
         },
       },
     });
+
+    if (updated.assignee && updated.assignee.id !== actorId) {
+      await this.notificationService.notifyTaskAssigned({
+        userId: updated.assignee.id,
+        actorId,
+        taskId: updated.id,
+        taskTitle: updated.title,
+        projectId: task.column.board.project.id,
+        projectName: task.column.board.project.name,
+      });
+    }
+
+    return updated;
   }
 
   async addComment(taskId: string, content: string, authorId: string) {

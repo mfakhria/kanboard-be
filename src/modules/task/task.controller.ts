@@ -65,8 +65,9 @@ export class TaskController {
   async assign(
     @Param('id') taskId: string,
     @Body('assigneeId') assigneeId: string | null,
+    @CurrentUser('id') userId: string,
   ) {
-    return this.taskService.assignMember(taskId, assigneeId);
+    return this.taskService.assignMember(taskId, assigneeId, userId);
   }
 
   @Post(':id/comments')

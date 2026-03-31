@@ -103,10 +103,10 @@ export declare class ProjectController {
         id: string;
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
+        projectId: string;
         status: import(".prisma/client").$Enums.InvitationStatus;
         inviterId: string;
         token: string;
-        projectId: string;
         expiresAt: Date;
     })[]>;
     acceptInvitation(dto: AcceptInvitationDto, userId: string): Promise<{
@@ -133,10 +133,10 @@ export declare class ProjectController {
         id: string;
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
+        projectId: string;
         status: import(".prisma/client").$Enums.InvitationStatus;
         inviterId: string;
         token: string;
-        projectId: string;
         expiresAt: Date;
     }>;
     findOne(projectId: string, userId: string): Promise<{
@@ -200,9 +200,9 @@ export declare class ProjectController {
                     createdAt: Date;
                     updatedAt: Date;
                     description: string | null;
+                    title: string;
                     dueDate: Date | null;
                     position: number;
-                    title: string;
                     priority: import(".prisma/client").$Enums.TaskPriority;
                     completed: boolean;
                     columnId: string;
@@ -289,10 +289,10 @@ export declare class ProjectController {
         id: string;
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
+        projectId: string;
         status: import(".prisma/client").$Enums.InvitationStatus;
         inviterId: string;
         token: string;
-        projectId: string;
         expiresAt: Date;
     }>;
     getMembers(projectId: string, userId: string): Promise<({
@@ -320,10 +320,10 @@ export declare class ProjectController {
         id: string;
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
+        projectId: string;
         status: import(".prisma/client").$Enums.InvitationStatus;
         inviterId: string;
         token: string;
-        projectId: string;
         expiresAt: Date;
     })[]>;
     updateMemberRole(projectId: string, memberId: string, dto: UpdateMemberRoleDto, userId: string): Promise<{
@@ -352,10 +352,10 @@ export declare class ProjectController {
         id: string;
         createdAt: Date;
         role: import(".prisma/client").$Enums.ProjectRole;
+        projectId: string;
         status: import(".prisma/client").$Enums.InvitationStatus;
         inviterId: string;
         token: string;
-        projectId: string;
         expiresAt: Date;
     }>;
 }

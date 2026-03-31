@@ -10,11 +10,13 @@ exports.TaskModule = void 0;
 const common_1 = require("@nestjs/common");
 const task_controller_1 = require("./task.controller");
 const task_service_1 = require("./task.service");
+const notification_module_1 = require("../notification/notification.module");
 let TaskModule = class TaskModule {
 };
 exports.TaskModule = TaskModule;
 exports.TaskModule = TaskModule = __decorate([
     (0, common_1.Module)({
+        imports: [notification_module_1.NotificationModule],
         controllers: [task_controller_1.TaskController],
         providers: [task_service_1.TaskService],
         exports: [task_service_1.TaskService],

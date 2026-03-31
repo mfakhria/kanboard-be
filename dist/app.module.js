@@ -18,6 +18,7 @@ const board_module_1 = require("./modules/board/board.module");
 const column_module_1 = require("./modules/column/column.module");
 const task_module_1 = require("./modules/task/task.module");
 const analytics_module_1 = require("./modules/analytics/analytics.module");
+const notification_module_1 = require("./modules/notification/notification.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -37,6 +38,7 @@ exports.AppModule = AppModule = __decorate([
             column_module_1.ColumnModule,
             task_module_1.TaskModule,
             analytics_module_1.AnalyticsModule,
+            notification_module_1.NotificationModule,
         ],
     })
 ], AppModule);

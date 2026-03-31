@@ -13,9 +13,11 @@ exports.WorkspaceService = void 0;
 const common_1 = require("@nestjs/common");
 const client_1 = require("@prisma/client");
 const prisma_service_1 = require("../../prisma/prisma.service");
+const notification_service_1 = require("../notification/notification.service");
 let WorkspaceService = class WorkspaceService {
-    constructor(prisma) {
+    constructor(prisma, notificationService) {
         this.prisma = prisma;
+        this.notificationService = notificationService;
     }
     async create(dto, userId) {
         const slug = this.generateSlug(dto.name);
@@ -182,7 +184,7 @@ let WorkspaceService = class WorkspaceService {
         if (existingInvite) {
             throw new common_1.ConflictException('An invitation is already pending for this user');
         }
-        return this.prisma.workspaceInvitation.create({
+        const invitation = await this.prisma.workspaceInvitation.create({
             data: {
                 workspaceId,
                 inviterId,
@@ -215,6 +217,15 @@ let WorkspaceService = class WorkspaceService {
                 },
             },
         });
+        await this.notificationService.notifyWorkspaceInvitation({
+            userId: user.id,
+            actorId: inviterId,
+            workspaceId,
+            workspaceName: invitation.workspace.name,
+            invitationId: invitation.id,
+            role: invitation.role,
+        });
+        return invitation;
     }
     async getPendingInvitations(userId) {
         return this.prisma.workspaceInvitation.findMany({
@@ -433,6 +444,7 @@ let WorkspaceService = class WorkspaceService {
 exports.WorkspaceService = WorkspaceService;
 exports.WorkspaceService = WorkspaceService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        notification_service_1.NotificationService])
 ], WorkspaceService);
 //# sourceMappingURL=workspace.service.js.map

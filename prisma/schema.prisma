@@ -30,6 +30,9 @@ model User {
   projectInvitations ProjectInvitation[]
   comments         Comment[]
   activityLogs     ActivityLog[]
+  notifications    Notification[]         @relation("NotificationUser")
+  actedNotifications Notification[]       @relation("NotificationActor")
+  notificationPreference NotificationPreference?
 
   @@map("users")
 }
@@ -348,4 +351,51 @@ model ActivityLog {
   @@index([projectId])
   @@index([createdAt])
   @@map("activity_logs")
+}
+
+enum NotificationType {
+  WORKSPACE_INVITATION
+  PROJECT_INVITATION
+  TASK_ASSIGNED
+  GENERAL
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  type      NotificationType
+  title     String
+  message   String
+  metadata  Json?
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  userId    String           @map("user_id")
+  user      User             @relation("NotificationUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  actorId   String?          @map("actor_id")
+  actor     User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id             String   @id @default(uuid())
+  emailEnabled   Boolean  @default(true) @map("email_enabled")
+  pushEnabled    Boolean  @default(true) @map("push_enabled")
+  taskAssigned   Boolean  @default(true) @map("task_assigned")
+  taskCompleted  Boolean  @default(true) @map("task_completed")
+  taskOverdue    Boolean  @default(false) @map("task_overdue")
+  projectUpdates Boolean  @default(true) @map("project_updates")
+  teamActivity   Boolean  @default(false) @map("team_activity")
+  weeklyDigest   Boolean  @default(true) @map("weekly_digest")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  userId         String   @unique @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }

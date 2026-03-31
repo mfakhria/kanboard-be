@@ -9,9 +9,9 @@ export declare class ColumnController {
             createdAt: Date;
             updatedAt: Date;
             description: string | null;
+            title: string;
             dueDate: Date | null;
             position: number;
-            title: string;
             priority: import(".prisma/client").$Enums.TaskPriority;
             completed: boolean;
             columnId: string;

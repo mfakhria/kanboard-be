@@ -17,17 +17,17 @@ export declare class BoardService {
                 labels: {
                     name: string;
                     id: string;
-                    color: string;
                     taskId: string;
+                    color: string;
                 }[];
             } & {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
                 description: string | null;
+                title: string;
                 dueDate: Date | null;
                 position: number;
-                title: string;
                 priority: import(".prisma/client").$Enums.TaskPriority;
                 completed: boolean;
                 columnId: string;
@@ -65,17 +65,17 @@ export declare class BoardService {
                 labels: {
                     name: string;
                     id: string;
-                    color: string;
                     taskId: string;
+                    color: string;
                 }[];
             } & {
                 id: string;
                 createdAt: Date;
                 updatedAt: Date;
                 description: string | null;
+                title: string;
                 dueDate: Date | null;
                 position: number;
-                title: string;
                 priority: import(".prisma/client").$Enums.TaskPriority;
                 completed: boolean;
                 columnId: string;

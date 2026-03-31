@@ -1,8 +1,10 @@
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 import { CreateWorkspaceDto, UpdateWorkspaceDto, InviteMemberDto, AssignRoleDto } from './dto';
 export declare class WorkspaceService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly notificationService;
+    constructor(prisma: PrismaService, notificationService: NotificationService);
     create(dto: CreateWorkspaceDto, userId: string): Promise<{
         members: ({
             user: {

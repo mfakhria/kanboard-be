@@ -36,11 +36,11 @@ export declare class AnalyticsService {
             id: string;
             createdAt: Date;
             userId: string;
+            metadata: import("@prisma/client/runtime/library").JsonValue | null;
             projectId: string | null;
             action: import(".prisma/client").$Enums.ActivityAction;
             entity: string;
             entityId: string;
-            metadata: import("@prisma/client/runtime/library").JsonValue | null;
         })[];
         dailyStats: {
             date: string;

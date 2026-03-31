@@ -40,8 +40,8 @@ let TaskController = class TaskController {
     async move(taskId, dto) {
         return this.taskService.move(taskId, dto);
     }
-    async assign(taskId, assigneeId) {
-        return this.taskService.assignMember(taskId, assigneeId);
+    async assign(taskId, assigneeId, userId) {
+        return this.taskService.assignMember(taskId, assigneeId, userId);
     }
     async addComment(taskId, content, userId) {
         return this.taskService.addComment(taskId, content, userId);
@@ -98,8 +98,9 @@ __decorate([
     (0, common_1.Patch)(':id/assign'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)('assigneeId')),
+    __param(2, (0, decorators_1.CurrentUser)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:paramtypes", [String, Object, String]),
     __metadata("design:returntype", Promise)
 ], TaskController.prototype, "assign", null);
 __decorate([

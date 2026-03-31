@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { WorkspaceRole, WorkspaceInvitationStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NotificationService } from '../notification/notification.service';
 import {
   CreateWorkspaceDto,
   UpdateWorkspaceDto,
@@ -16,7 +17,10 @@ import {
 
 @Injectable()
 export class WorkspaceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   async create(dto: CreateWorkspaceDto, userId: string) {
     const slug = this.generateSlug(dto.name);
@@ -205,7 +209,7 @@ export class WorkspaceService {
       throw new ConflictException('An invitation is already pending for this user');
     }
 
-    return this.prisma.workspaceInvitation.create({
+    const invitation = await this.prisma.workspaceInvitation.create({
       data: {
         workspaceId,
         inviterId,
@@ -238,6 +242,17 @@ export class WorkspaceService {
         },
       },
     });
+
+    await this.notificationService.notifyWorkspaceInvitation({
+      userId: user.id,
+      actorId: inviterId,
+      workspaceId,
+      workspaceName: invitation.workspace.name,
+      invitationId: invitation.id,
+      role: invitation.role,
+    });
+
+    return invitation;
   }
 
   async getPendingInvitations(userId: string) {

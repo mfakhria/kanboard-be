@@ -10,11 +10,13 @@ exports.WorkspaceModule = void 0;
 const common_1 = require("@nestjs/common");
 const workspace_controller_1 = require("./workspace.controller");
 const workspace_service_1 = require("./workspace.service");
+const notification_module_1 = require("../notification/notification.module");
 let WorkspaceModule = class WorkspaceModule {
 };
 exports.WorkspaceModule = WorkspaceModule;
 exports.WorkspaceModule = WorkspaceModule = __decorate([
     (0, common_1.Module)({
+        imports: [notification_module_1.NotificationModule],
         controllers: [workspace_controller_1.WorkspaceController],
         providers: [workspace_service_1.WorkspaceService],
         exports: [workspace_service_1.WorkspaceService],

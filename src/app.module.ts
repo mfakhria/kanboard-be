@@ -9,6 +9,7 @@ import { BoardModule } from './modules/board/board.module';
 import { ColumnModule } from './modules/column/column.module';
 import { TaskModule } from './modules/task/task.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
     ColumnModule,
     TaskModule,
     AnalyticsModule,
+    NotificationModule,
   ],
 })
 export class AppModule {}

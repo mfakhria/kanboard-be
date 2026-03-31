@@ -31,17 +31,17 @@ export declare class TaskController {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -67,17 +67,17 @@ export declare class TaskController {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -124,17 +124,17 @@ export declare class TaskController {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -154,17 +154,17 @@ export declare class TaskController {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -176,9 +176,9 @@ export declare class TaskController {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
@@ -198,24 +198,24 @@ export declare class TaskController {
         labels: {
             name: string;
             id: string;
-            color: string;
             taskId: string;
+            color: string;
         }[];
     } & {
         id: string;
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
         assigneeId: string | null;
         creatorId: string;
     }>;
-    assign(taskId: string, assigneeId: string | null): Promise<{
+    assign(taskId: string, assigneeId: string | null, userId: string): Promise<{
         assignee: {
             name: string;
             email: string;
@@ -227,9 +227,9 @@ export declare class TaskController {
         createdAt: Date;
         updatedAt: Date;
         description: string | null;
+        title: string;
         dueDate: Date | null;
         position: number;
-        title: string;
         priority: import(".prisma/client").$Enums.TaskPriority;
         completed: boolean;
         columnId: string;
