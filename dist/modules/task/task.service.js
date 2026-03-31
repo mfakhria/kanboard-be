@@ -84,6 +84,11 @@ let TaskService = class TaskService {
                 assigneeId: dto.assigneeId,
                 creatorId,
                 position,
+                labels: dto.labels?.length
+                    ? {
+                        create: this.normalizeLabels(dto.labels),
+                    }
+                    : undefined,
             },
             include: {
                 assignee: {
@@ -212,8 +217,18 @@ let TaskService = class TaskService {
         const updatedTask = await this.prisma.task.update({
             where: { id: taskId },
             data: {
-                ...dto,
+                title: dto.title,
+                description: dto.description,
+                priority: dto.priority,
+                assigneeId: dto.assigneeId,
+                completed: dto.completed,
                 dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
+                labels: dto.labels
+                    ? {
+                        deleteMany: {},
+                        create: this.normalizeLabels(dto.labels),
+                    }
+                    : undefined,
             },
             include: {
                 assignee: {
@@ -536,6 +551,14 @@ let TaskService = class TaskService {
                 metadata: params.metadata,
             },
         });
+    }
+    normalizeLabels(labels) {
+        return labels
+            .map((label) => ({
+            name: label.name.trim(),
+            color: label.color?.trim() || '#6366f1',
+        }))
+            .filter((label) => label.name.length > 0);
     }
 };
 exports.TaskService = TaskService;

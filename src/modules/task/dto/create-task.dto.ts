@@ -5,8 +5,23 @@ import {
   IsEnum,
   IsDateString,
   IsInt,
+  IsArray,
+  ValidateNested,
+  Matches,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { TaskPriority } from '@prisma/client';
+
+class TaskLabelInputDto {
+  @IsString()
+  @IsNotEmpty()
+  name: string;
+
+  @IsString()
+  @IsOptional()
+  @Matches(/^#(?:[0-9a-fA-F]{3}){1,2}$/)
+  color?: string;
+}
 
 export class CreateTaskDto {
   @IsString()
@@ -32,6 +47,12 @@ export class CreateTaskDto {
   @IsString()
   @IsOptional()
   assigneeId?: string;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TaskLabelInputDto)
+  @IsOptional()
+  labels?: TaskLabelInputDto[];
 
   @IsInt()
   @IsOptional()

@@ -254,4 +254,5 @@ export declare class TaskService {
         authorId: string;
     }>;
     private logActivity;
+    private normalizeLabels;
 }
