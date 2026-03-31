@@ -4,7 +4,6 @@ export declare class TaskController {
     private readonly taskService;
     constructor(taskService: TaskService);
     private static readonly allowedAttachmentMimeTypes;
-    private static getUploadDestination;
     findAll(workspaceId: string, userId: string): Promise<({
         column: {
             board: {

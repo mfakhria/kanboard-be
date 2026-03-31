@@ -7,12 +7,15 @@ const app_module_1 = require("./app.module");
 const filters_1 = require("./common/filters");
 const interceptors_1 = require("./common/interceptors");
 const express = require("express");
+const upload_path_util_1 = require("./common/utils/upload-path.util");
 let cachedApp;
 async function bootstrap() {
     const expressApp = express();
     const adapter = new platform_express_1.ExpressAdapter(expressApp);
+    const uploadsPath = (0, upload_path_util_1.ensureUploadsRootPath)();
     const app = await core_1.NestFactory.create(app_module_1.AppModule, adapter, { logger: false });
     app.setGlobalPrefix('api');
+    app.use('/uploads', express.static(uploadsPath));
     const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
     app.enableCors({
         origin: corsOrigin.split(',').map((o) => o.trim()),

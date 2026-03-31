@@ -15,8 +15,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { extname } from 'path';
 import { TaskService } from './task.service';
 import {
   CreateTaskDto,
@@ -27,6 +26,7 @@ import {
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators';
+import { ensureTaskAttachmentsPath } from '../../common/utils/upload-path.util';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
@@ -35,14 +35,6 @@ export class TaskController {
 
   private static readonly allowedAttachmentMimeTypes =
     /^(image\/(jpeg|png|gif|webp)|application\/pdf|application\/msword|application\/vnd\.openxmlformats-officedocument\.wordprocessingml\.document|application\/vnd\.ms-excel|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|application\/vnd\.ms-powerpoint|application\/vnd\.openxmlformats-officedocument\.presentationml\.presentation|text\/plain|text\/csv|application\/zip|application\/x-zip-compressed)$/i;
-
-  private static getUploadDestination() {
-    const destination = join(process.cwd(), 'uploads', 'task-attachments');
-    if (!existsSync(destination)) {
-      mkdirSync(destination, { recursive: true });
-    }
-    return destination;
-  }
 
   @Get()
   async findAll(
@@ -138,7 +130,7 @@ export class TaskController {
   @Post(':id/attachments')
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: TaskController.getUploadDestination(),
+      destination: ensureTaskAttachmentsPath(),
       filename: (_: any, file: any, callback: any) => {
         const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
         callback(null, `${uniqueSuffix}${extname(file.originalname)}`);

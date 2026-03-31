@@ -19,8 +19,8 @@ import {
   DecideTaskReviewDto,
 } from './dto';
 import { NotificationService } from '../notification/notification.service';
-import { join } from 'path';
 import { existsSync, unlinkSync } from 'fs';
+import { getTaskAttachmentFilePath } from '../../common/utils/upload-path.util';
 
 @Injectable()
 export class TaskService {
@@ -986,7 +986,7 @@ export class TaskService {
       where: { id: attachmentId },
     });
 
-    const filePath = join(process.cwd(), 'uploads', 'task-attachments', deletedAttachment.fileName);
+    const filePath = getTaskAttachmentFilePath(deletedAttachment.fileName);
     if (existsSync(filePath)) {
       unlinkSync(filePath);
     }

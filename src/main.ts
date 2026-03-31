@@ -1,22 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
 import * as express from 'express';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters';
 import { TransformInterceptor } from './common/interceptors';
+import { ensureUploadsRootPath } from './common/utils/upload-path.util';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const logger = new Logger('Bootstrap');
-  const uploadsPath = join(process.cwd(), 'uploads');
-
-  if (!existsSync(uploadsPath)) {
-    mkdirSync(uploadsPath, { recursive: true });
-  }
+  const uploadsPath = ensureUploadsRootPath();
 
   // Global prefix
   app.setGlobalPrefix('api');

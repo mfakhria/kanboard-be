@@ -6,16 +6,19 @@ import { HttpExceptionFilter } from './common/filters';
 import { TransformInterceptor } from './common/interceptors';
 import * as express from 'express';
 import type { Express, Request, Response } from 'express';
+import { ensureUploadsRootPath } from './common/utils/upload-path.util';
 
 let cachedApp: Express;
 
 async function bootstrap(): Promise<Express> {
   const expressApp = express();
   const adapter = new ExpressAdapter(expressApp);
+  const uploadsPath = ensureUploadsRootPath();
 
   const app = await NestFactory.create(AppModule, adapter, { logger: false });
 
   app.setGlobalPrefix('api');
+  app.use('/uploads', express.static(uploadsPath));
 
   const corsOrigin = process.env.CORS_ORIGIN ?? 'http://localhost:3000';
   app.enableCors({

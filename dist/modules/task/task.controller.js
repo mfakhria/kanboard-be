@@ -17,21 +17,14 @@ const common_1 = require("@nestjs/common");
 const platform_express_1 = require("@nestjs/platform-express");
 const multer_1 = require("multer");
 const path_1 = require("path");
-const fs_1 = require("fs");
 const task_service_1 = require("./task.service");
 const dto_1 = require("./dto");
 const jwt_auth_guard_1 = require("../auth/guards/jwt-auth.guard");
 const decorators_1 = require("../../common/decorators");
+const upload_path_util_1 = require("../../common/utils/upload-path.util");
 let TaskController = class TaskController {
     constructor(taskService) {
         this.taskService = taskService;
-    }
-    static getUploadDestination() {
-        const destination = (0, path_1.join)(process.cwd(), 'uploads', 'task-attachments');
-        if (!(0, fs_1.existsSync)(destination)) {
-            (0, fs_1.mkdirSync)(destination, { recursive: true });
-        }
-        return destination;
     }
     async findAll(workspaceId, userId) {
         return this.taskService.findAllByWorkspace(workspaceId, userId);
@@ -172,7 +165,7 @@ __decorate([
     (0, common_1.Post)(':id/attachments'),
     (0, common_1.UseInterceptors)((0, platform_express_1.FileInterceptor)('file', {
         storage: (0, multer_1.diskStorage)({
-            destination: TaskController.getUploadDestination(),
+            destination: (0, upload_path_util_1.ensureTaskAttachmentsPath)(),
             filename: (_, file, callback) => {
                 const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
                 callback(null, `${uniqueSuffix}${(0, path_1.extname)(file.originalname)}`);

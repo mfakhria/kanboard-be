@@ -14,8 +14,8 @@ const client_1 = require("@prisma/client");
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../../prisma/prisma.service");
 const notification_service_1 = require("../notification/notification.service");
-const path_1 = require("path");
 const fs_1 = require("fs");
+const upload_path_util_1 = require("../../common/utils/upload-path.util");
 let TaskService = class TaskService {
     constructor(prisma, notificationService) {
         this.prisma = prisma;
@@ -891,7 +891,7 @@ let TaskService = class TaskService {
         const deletedAttachment = await this.prisma.taskAttachment.delete({
             where: { id: attachmentId },
         });
-        const filePath = (0, path_1.join)(process.cwd(), 'uploads', 'task-attachments', deletedAttachment.fileName);
+        const filePath = (0, upload_path_util_1.getTaskAttachmentFilePath)(deletedAttachment.fileName);
         if ((0, fs_1.existsSync)(filePath)) {
             (0, fs_1.unlinkSync)(filePath);
         }
