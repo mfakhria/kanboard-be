@@ -184,6 +184,7 @@ __decorate([
     __param(1, (0, common_1.UploadedFile)(new common_1.ParseFilePipeBuilder()
         .addFileTypeValidator({
         fileType: TaskController.allowedAttachmentMimeTypes,
+        fallbackToMimetype: true,
     })
         .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 })
         .build({

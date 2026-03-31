@@ -152,6 +152,7 @@ export class TaskController {
       new ParseFilePipeBuilder()
         .addFileTypeValidator({
           fileType: TaskController.allowedAttachmentMimeTypes,
+          fallbackToMimetype: true,
         })
         .addMaxSizeValidator({ maxSize: 10 * 1024 * 1024 })
         .build({
