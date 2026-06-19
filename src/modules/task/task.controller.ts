@@ -14,6 +14,7 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { TaskService } from './task.service';
 import {
   CreateTaskDto,
@@ -126,7 +127,7 @@ export class TaskController {
 
   @Post(':id/attachments')
   @UseInterceptors(FileInterceptor('file', {
-    storage: undefined,
+    storage: memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
   }))
   async uploadAttachment(
