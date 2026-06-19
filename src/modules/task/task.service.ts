@@ -19,8 +19,7 @@ import {
   DecideTaskReviewDto,
 } from './dto';
 import { NotificationService } from '../notification/notification.service';
-import { existsSync, unlinkSync } from 'fs';
-import { getTaskAttachmentFilePath } from '../../common/utils/upload-path.util';
+import { put, del } from '@vercel/blob';
 
 @Injectable()
 export class TaskService {
@@ -911,15 +910,25 @@ export class TaskService {
       throw new NotFoundException('Task not found');
     }
 
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = file.originalname.match(/\.[^.]+$/)?.[0] ?? '';
+    const blobPath = `task-attachments/${taskId}/${uniqueSuffix}${ext}`;
+
+    const blob = await put(blobPath, file.buffer, {
+      access: 'public',
+      contentType: file.mimetype,
+      addRandomSuffix: false,
+    });
+
     const attachment = await this.prisma.taskAttachment.create({
       data: {
         taskId,
         uploaderId: userId,
-        fileName: file.filename,
+        fileName: blobPath,
         originalName: file.originalname,
         mimeType: file.mimetype,
         size: file.size,
-        url: `/uploads/task-attachments/${file.filename}`,
+        url: blob.url,
       },
       include: {
         uploader: {
@@ -986,9 +995,11 @@ export class TaskService {
       where: { id: attachmentId },
     });
 
-    const filePath = getTaskAttachmentFilePath(deletedAttachment.fileName);
-    if (existsSync(filePath)) {
-      unlinkSync(filePath);
+    try {
+      await del(deletedAttachment.url);
+    } catch (err) {
+      // Blob may already be deleted; log and continue
+      console.warn('Failed to delete blob:', err);
     }
 
     await this.logActivity({

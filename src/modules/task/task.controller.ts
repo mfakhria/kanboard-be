@@ -14,8 +14,6 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
 import { TaskService } from './task.service';
 import {
   CreateTaskDto,
@@ -26,7 +24,6 @@ import {
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators';
-import { ensureTaskAttachmentsPath } from '../../common/utils/upload-path.util';
 
 @Controller('tasks')
 @UseGuards(JwtAuthGuard)
@@ -129,13 +126,7 @@ export class TaskController {
 
   @Post(':id/attachments')
   @UseInterceptors(FileInterceptor('file', {
-    storage: diskStorage({
-      destination: ensureTaskAttachmentsPath(),
-      filename: (_: any, file: any, callback: any) => {
-        const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-        callback(null, `${uniqueSuffix}${extname(file.originalname)}`);
-      },
-    }),
+    storage: undefined,
     limits: { fileSize: 10 * 1024 * 1024 },
   }))
   async uploadAttachment(

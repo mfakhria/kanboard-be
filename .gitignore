@@ -31,3 +31,4 @@ prisma/*.db
 # Database backups
 *.sql
 .vercel
+.env*
