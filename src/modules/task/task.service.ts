@@ -914,28 +914,12 @@ export class TaskService {
     const ext = file.originalname.match(/\.[^.]+$/)?.[0] ?? '';
     const blobPath = `task-attachments/${taskId}/${uniqueSuffix}${ext}`;
 
-    console.log('Upload debug:', {
-      hasBuffer: !!file?.buffer,
-      bufferSize: file?.buffer?.length,
-      mimetype: file?.mimetype,
-      originalname: file?.originalname,
-      size: file?.size,
-      blobPath,
-      hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
+    const blob = await put(blobPath, file.buffer, {
+      access: 'public',
+      contentType: file.mimetype,
+      addRandomSuffix: false,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
-
-    let blob;
-    try {
-      blob = await put(blobPath, file.buffer, {
-        access: 'public',
-        contentType: file.mimetype,
-        addRandomSuffix: false,
-        token: process.env.BLOB_READ_WRITE_TOKEN,
-      });
-    } catch (err) {
-      console.error('Blob upload error:', err?.message ?? err);
-      throw err;
-    }
 
     const attachment = await this.prisma.taskAttachment.create({
       data: {
@@ -1013,9 +997,10 @@ export class TaskService {
     });
 
     try {
-      await del(deletedAttachment.url);
+      await del(deletedAttachment.url, {
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
     } catch (err) {
-      // Blob may already be deleted; log and continue
       console.warn('Failed to delete blob:', err);
     }
 
