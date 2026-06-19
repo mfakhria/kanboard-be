@@ -914,11 +914,27 @@ export class TaskService {
     const ext = file.originalname.match(/\.[^.]+$/)?.[0] ?? '';
     const blobPath = `task-attachments/${taskId}/${uniqueSuffix}${ext}`;
 
-    const blob = await put(blobPath, file.buffer, {
-      access: 'public',
-      contentType: file.mimetype,
-      addRandomSuffix: false,
+    console.log('Upload debug:', {
+      hasBuffer: !!file?.buffer,
+      bufferSize: file?.buffer?.length,
+      mimetype: file?.mimetype,
+      originalname: file?.originalname,
+      size: file?.size,
+      blobPath,
+      hasBlobToken: !!process.env.BLOB_READ_WRITE_TOKEN,
     });
+
+    let blob;
+    try {
+      blob = await put(blobPath, file.buffer, {
+        access: 'public',
+        contentType: file.mimetype,
+        addRandomSuffix: false,
+      });
+    } catch (err) {
+      console.error('Blob upload error:', err);
+      throw err;
+    }
 
     const attachment = await this.prisma.taskAttachment.create({
       data: {
