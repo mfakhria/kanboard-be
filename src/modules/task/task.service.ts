@@ -930,9 +930,10 @@ export class TaskService {
         access: 'public',
         contentType: file.mimetype,
         addRandomSuffix: false,
+        token: process.env.BLOB_READ_WRITE_TOKEN,
       });
     } catch (err) {
-      console.error('Blob upload error:', err);
+      console.error('Blob upload error:', err?.message ?? err);
       throw err;
     }
 
